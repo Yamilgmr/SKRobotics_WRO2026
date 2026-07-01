@@ -1,0 +1,107 @@
+# 2. WRO 2026 Requirements Map
+
+This document maps the repository to the WRO 2026 Future Engineers documentation expectations.
+
+## Repository Requirements
+
+| Requirement | Repository Response | Status |
+| --- | --- | --- |
+| Public GitHub repository | Intended public repo: `Yamilgmr/SKRobotics_WRO2026` | Pending remote creation |
+| README in English with at least 5000 characters | Main README is written in English and exceeds the minimum target | Done |
+| Source code for programmed components | Arduino sketches in `src/` | Started |
+| Vehicle photos | Placeholders in `v-photos/` | Pending real photos |
+| Team photos | Placeholders in `t-photos/` | Pending real photos |
+| Demonstration videos | Link table in `video/video.md` | Pending real videos |
+| Wiring and electromechanical diagrams | Markdown diagrams in `schemes/` | Started |
+| CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
+| Engineering process evidence | Decision log and test templates | Started |
+| At least three meaningful commits | Planned local commit sequence | Started |
+
+## Rubric Alignment
+
+### Criterion 1: Mobility and Mechanical Design
+
+Evidence location:
+
+- `docs/03_mechanical_mobility.md`
+- `models/`
+- `v-photos/`
+- `engineering-journal/decision-log.md`
+
+Target evidence:
+
+- Steering geometry.
+- Drive motor selection and torque/speed reasoning.
+- Wheelbase and track width.
+- Servo limits.
+- Mechanical trade-offs.
+- Test results for turn radius and stability.
+
+### Criterion 2: Power and Sensor Architecture
+
+Evidence location:
+
+- `docs/04_power_and_sensors.md`
+- `schemes/power_architecture.md`
+- `schemes/electromechanical_overview.md`
+- `data/calibration/`
+
+Target evidence:
+
+- Battery voltage and current budget.
+- Motor driver selection and reason.
+- Sensor placement geometry.
+- Noise and failure handling.
+- Calibration method.
+
+### Criterion 3: Software Architecture and Obstacle Strategy
+
+Evidence location:
+
+- `docs/05_software_architecture.md`
+- `docs/06_open_challenge_strategy.md`
+- `docs/07_obstacle_challenge_strategy.md`
+- `src/`
+
+Target evidence:
+
+- State machine.
+- Algorithms and constants.
+- Lane following strategy.
+- Obstacle behavior.
+- Edge cases.
+- Tuning metrics.
+
+### Criterion 4: System Thinking and Engineering Decisions
+
+Evidence location:
+
+- `docs/09_engineering_decisions.md`
+- `docs/11_risk_register.md`
+- `engineering-journal/decision-log.md`
+
+Target evidence:
+
+- Constraints.
+- Trade-offs.
+- Iterations.
+- Risk mitigation.
+- Data-based "why we chose X" reasoning.
+
+### Criterion 5: Reproducibility and GitHub Quality
+
+Evidence location:
+
+- `README.md`
+- `CHANGELOG.md`
+- `src/README.md`
+- all required WRO folders
+
+Target evidence:
+
+- Clear structure.
+- Meaningful commit history.
+- Build/upload instructions.
+- Wiring, code, CAD, and photos.
+- Test workflow and release notes.
+
