@@ -14,7 +14,5 @@ This was us recreating Rush Hour after the robot didn’t behave the way we want
 <img width="1536" height="2048" alt="image" src="https://github.com/user-attachments/assets/01a6b425-9ddc-42e6-9a71-f3057bdfac17" />
 <img width="250" height="371" alt="image" src="https://github.com/user-attachments/assets/d9aa6406-76cc-4607-844f-413f65769959" />
 
-School:
-
-- Colegio Ingeniero Tomas Guardia, Panama
-
+Right: - Yamil Lopez
+Left: - Carlo Yau
