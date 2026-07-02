@@ -1,11 +1,6 @@
 # Team Photos
 
-This folder will contain the required team photos.
-
-Required placeholders:
-
-- `official_team_photo.jpg` - formal photo with all team members.
-- `fun_team_photo.jpg` - informal team photo.
+Here you can visualize the team member's pictures. In this file folder, you can also find other personal, funny, and formal images.
 
 Team members:
 
