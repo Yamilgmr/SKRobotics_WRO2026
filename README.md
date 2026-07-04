@@ -22,7 +22,7 @@ The WRO 2026 rules evaluate not only the final vehicle performance, but also the
 4. System thinking and engineering decisions.
 5. Reproducibility and GitHub repository quality.
 
-Our current vehicle is in an early development stage. The repository already contains the required WRO folder structure, starter Arduino code, proposed test routines, wiring placeholders, strategy documents, engineering journal templates, and the current six-view vehicle photo set. CAD files, videos, exact measurements, diagrams, and final calibration data will be added as the physical robot evolves.
+Our current vehicle is in an early development stage. The repository already contains the required WRO folder structure, ESP32-based starter code, proposed test routines, a confirmed first pin map, strategy documents, engineering journal templates, and the current six-view vehicle photo set. CAD files, videos, exact measurements, diagrams, and final calibration data will be added as the physical robot evolves.
 
 ## Current Hardware Baseline
 
@@ -30,15 +30,38 @@ The current prototype uses the following parts:
 
 | Subsystem | Current Part | Purpose | Status |
 | --- | --- | --- | --- |
-| Main controller | Arduino Mega 2560 | Reads sensors and controls actuators | Selected |
-| Distance sensing | 3 ultrasonic sensors | Front, left, and right wall distance estimation | Selected |
-| Steering | AD002 servo | Front axle steering | Selected |
+| Main controller | ESP32 Acebott / ESP32 Dev Module | Reads sensors, controls actuators, and runs Open Challenge state logic | Selected |
+| Distance sensing | 3 HC-SR04 ultrasonic sensors | Front, left, and right wall distance estimation | Selected |
+| Orientation sensing | MPU6050 IMU | Yaw estimate for turn exit validation | Selected |
+| Steering | MG996R servo | Front axle steering | Selected |
 | Propulsion | DC motor | Rear drive motor | Selected |
 | Battery | 3 x 3.7 V battery holder | Main power source | Selected |
 | Motor driver | L298N | DC motor direction and PWM control | Selected for first prototype |
 | Vision | HuskyLens AI camera | Planned red/green obstacle color recognition | Selected for Obstacle Challenge |
+| Logic protection | 8-channel bidirectional level converter | Protects ESP32 GPIO when interfacing with 5 V devices | Selected |
 
-Important safety note: a DC motor must not be powered directly from Arduino pins. The team will use an L298N motor driver for the first working prototype because it is available and simple to wire with Arduino. The L298N is not the most efficient driver, so its voltage drop, heat, and current limits must be documented during testing. Until final wiring is checked, the firmware keeps motor output disabled by default.
+Important safety note: a DC motor must not be powered directly from ESP32 pins. The team will use an L298N motor driver for the first working prototype because it is available and simple to wire for PWM and direction control. The L298N is not the most efficient driver, so its voltage drop, heat, and current limits must be documented during testing. The ESP32 uses 3.3 V logic, so 5 V sensor signals, especially ultrasonic echo lines, must be routed through the level converter or another verified voltage protection method.
+
+## Confirmed First Pin Map
+
+This pin map comes from the current ESP32 base firmware and the team's confirmed wiring. It should be updated if any cable is moved during testing.
+
+| Component | ESP32 GPIO | Notes |
+| --- | --- | --- |
+| MG996R steering servo signal | GPIO 13 | 50 Hz PWM generated with ESP32 LEDC |
+| L298N ENA | GPIO 14 | Motor speed PWM |
+| L298N IN1 | GPIO 32 | Motor direction |
+| L298N IN2 | GPIO 33 | Motor direction |
+| Front HC-SR04 TRIG | GPIO 25 | Ultrasonic trigger |
+| Front HC-SR04 ECHO | GPIO 34 | Input-only GPIO; use level conversion from 5 V echo |
+| Left HC-SR04 TRIG | GPIO 26 | Ultrasonic trigger |
+| Left HC-SR04 ECHO | GPIO 35 | Input-only GPIO; use level conversion from 5 V echo |
+| Right HC-SR04 TRIG | GPIO 27 | Ultrasonic trigger |
+| Right HC-SR04 ECHO | GPIO 36 | Input-only GPIO; use level conversion from 5 V echo |
+| MPU6050 SDA | GPIO 21 | I2C data |
+| MPU6050 SCL | GPIO 22 | I2C clock |
+| Start button | GPIO 23 | Uses internal pull-up |
+| HuskyLens | TBD | Selected, not integrated yet |
 
 ## Technical Direction
 
@@ -55,12 +78,12 @@ The planned behavior is:
 
 This is a practical first approach for the hardware currently available. It is not the final competition strategy because three ultrasonic sensors alone cannot reliably solve all WRO 2026 requirements. To reach a stronger score, we plan to add or evaluate:
 
-- An IMU for yaw-based 90 degree turns and drift correction.
+- MPU6050 yaw feedback for turn exit validation and drift correction.
 - An encoder for repeatable distance and parking movement.
 - HuskyLens color/block recognition for obstacle challenge red and green pillar classification.
 - A tested L298N wiring and power setup with repeatable speed control.
 
-For the Obstacle Challenge, the planned strategy is to use the HuskyLens AI camera to detect the red and green blocks and send the classification result to the Arduino Mega. The Arduino will use that information to decide the correct evasion side. The final parking strategy is still under research and will be documented after the team chooses how to detect or approach the magenta parking box.
+For the Obstacle Challenge, the planned strategy is to use the HuskyLens AI camera to detect the red and green blocks and send the classification result to the ESP32. The ESP32 will use that information to decide the correct evasion side. The HuskyLens is selected but not integrated into the wiring or firmware yet. The final parking strategy is still under research and will be documented after the team chooses how to detect or approach the magenta parking box.
 
 ## WRO Repository Structure
 
@@ -72,7 +95,7 @@ This repository follows the public WRO Future Engineers template structure and e
 | `v-photos/` | Six required vehicle photos: front, back, left, right, top, and bottom. |
 | `video/` | Links to driving demonstration videos for each challenge. |
 | `schemes/` | Wiring diagrams, electromechanical diagrams, and power architecture. |
-| `src/` | Arduino firmware and calibration sketches. |
+| `src/` | ESP32 Arduino firmware and calibration sketches. |
 | `models/` | CAD, STL, laser-cut, or 3D-print files. |
 | `docs/` | Technical documentation by subsystem and strategy. |
 | `engineering-journal/` | Decision log, iteration notes, and test records. |
@@ -101,43 +124,44 @@ The structure is intentionally explicit. A judge or another team should be able 
 - [Obstacle Challenge placeholder firmware](src/SKRobotics_ObstacleChallenge/SKRobotics_ObstacleChallenge.ino)
 - [Ultrasonic sensor test](src/calibration/ultrasonic_sensor_test/ultrasonic_sensor_test.ino)
 - [Servo sweep test](src/calibration/servo_sweep_test/servo_sweep_test.ino)
-- [Motor driver test placeholder](src/calibration/motor_driver_test/motor_driver_test.ino)
+- [Motor driver test](src/calibration/motor_driver_test/motor_driver_test.ino)
 - [Source code notes](src/README.md)
 
 ## Firmware Philosophy
 
 The starter firmware is designed around a finite state machine. That makes the robot behavior easier to explain, test, and improve. The Open Challenge sketch separates these responsibilities:
 
-- `WAIT_FOR_START`: keep the robot still until the start button is pressed.
-- `FOLLOW_WALL`: drive forward and use side distance to stay near the target lane.
-- `PREFIRE_TURN`: start the turn before hitting the front wall.
-- `RECENTER`: return the steering toward the lane after a corner.
-- `FINISHED`: stop after the estimated number of turns for three laps.
+- `WAITING_FOR_START`: keep the robot still until the start button is pressed.
+- `STRAIGHT`: drive forward, monitor the front distance, and detect side openings.
+- `TURNING`: steer into the confirmed opening without stopping.
+- `REALIGNING`: center the steering and confirm the robot has recovered after the turn.
+- `FINISH_DRIVE`: move a short final distance after the twelfth corner.
+- `STOPPED`: stop the motor and keep steering centered.
 
-The first version avoids depending on unfinished calibration data. It uses the Arduino Mega, three ultrasonic sensors, steering servo, and a motor driver interface that will be wired to the L298N after the final pin map is confirmed. Constants are grouped at the top of the sketch so testing can be done methodically.
+The first version avoids depending on unfinished calibration data. It uses the ESP32, three ultrasonic sensors, MPU6050 yaw feedback, the MG996R steering servo, and the L298N motor driver. Constants are grouped at the top of the sketch so testing can be done methodically.
 
 The firmware also includes measurement filtering for ultrasonic sensors. Each distance reading is sampled several times, invalid readings are rejected, and the remaining values are averaged. This is necessary because ultrasonic sensors can be noisy near angled walls, soft surfaces, or curved corners.
 
 ## Motor Driver Status
 
-The team will use the L298N for the first prototype. This is a practical choice because it is available, familiar, and compatible with Arduino PWM/direction control. The engineering trade-off is that the L298N is inefficient compared with modern MOSFET-based drivers and can waste voltage as heat.
+The team will use the L298N for the first prototype. This is a practical choice because it is available, familiar, and compatible with ESP32 PWM/direction control. The engineering trade-off is that the L298N is inefficient compared with modern MOSFET-based drivers and can waste voltage as heat.
 
 The L298N setup must be documented with:
 
 - Motor voltage and expected current.
 - Voltage compatibility with the battery pack.
-- PWM input compatibility with Arduino Mega 5 V logic.
+- PWM and direction input compatibility with ESP32 3.3 V logic.
 - Heat observations during repeated runs.
 - Wiring diagram, common ground, and battery connection.
 - Test results at low, medium, and high PWM.
 
-Until this is solved, the code uses:
+The current Open Challenge code waits for a start button before driving:
 
 ```cpp
-const bool MOTOR_OUTPUT_ENABLED = false;
+static const bool WAIT_FOR_START_BUTTON = true;
 ```
 
-Set this to `true` only after the L298N is wired, the common ground is verified, and the robot has been tested safely with the wheels lifted.
+Keep this enabled during testing so the robot does not move immediately after upload or power-on.
 
 ## Open Challenge Scoring Focus
 
@@ -154,14 +178,14 @@ The team goal is to make the robot complete laps reliably before increasing spee
 
 ## Obstacle Challenge Scoring Focus
 
-The Obstacle Challenge requires the robot to pass red and green traffic signs on the correct side and later perform parking. The team plans to use the HuskyLens AI camera for red/green block recognition and send the detected color to the Arduino Mega for decision-making. Parking is still an open design problem.
+The Obstacle Challenge requires the robot to pass red and green traffic signs on the correct side and later perform parking. The team plans to use the HuskyLens AI camera for red/green block recognition and send the detected color to the ESP32 for decision-making. Parking is still an open design problem.
 
 Recommended next steps:
 
 1. Mount the HuskyLens with a stable view of the traffic signs.
 2. Train and test red and green block recognition under competition lighting.
-3. Define the serial/I2C communication method between HuskyLens and Arduino.
-4. Add an obstacle classifier module to the Arduino firmware.
+3. Define the serial/I2C communication method between HuskyLens and ESP32.
+4. Add an obstacle classifier module to the ESP32 firmware.
 5. Add evasion states to the finite state machine.
 6. Choose and document a parking detection method for the magenta parking box.
 
@@ -184,11 +208,13 @@ The repository includes templates for repeatable testing. Each test should recor
 Priority tests:
 
 - Ultrasonic sensor stability at 10 cm, 20 cm, 30 cm, 40 cm, and 60 cm.
+- ESP32-side voltage check after the level converter.
+- MPU6050 yaw stability and turn-exit repeatability.
 - Servo center and maximum safe left/right angles.
 - Motor PWM response with the selected driver.
 - Corner prefire threshold test.
 - Three lap consistency test.
-- Obstacle color detection test after the sensor is selected.
+- HuskyLens obstacle color detection test after integration.
 
 ## Reproducibility Checklist
 
@@ -196,10 +222,11 @@ Priority tests:
 - [x] README in English with more than 5000 characters.
 - [x] Team and season information.
 - [x] Hardware baseline.
+- [x] Confirmed first ESP32 pin map.
 - [x] Initial software architecture.
 - [x] Open Challenge starter code.
 - [x] Calibration sketches.
-- [x] Wiring and power placeholders.
+- [x] ESP32 wiring and power documentation started.
 - [x] Engineering journal templates.
 - [x] Current vehicle photos from all required angles.
 - [ ] Final wiring diagram photo/export.

@@ -10,14 +10,14 @@ A stop-and-turn approach is simpler, but it costs time and can make the robot un
 
 ## Algorithm
 
-1. Choose a wall to follow.
-2. Drive forward at a conservative PWM value.
-3. Read side distance and compute steering correction.
-4. If front distance is below `FRONT_PREFIRE_CM`, enter turn state.
-5. Hold the steering angle for `TURN_HOLD_MS`.
-6. Count the corner.
-7. Recenter for `RECENTER_MS`.
-8. Repeat until 12 turns are counted.
+1. Read front, left, and right ultrasonic sensors.
+2. Drive straight while the front path is clear.
+3. Watch for a confirmed opening when a side wall disappears.
+4. Enter the turn state toward the confirmed opening.
+5. Keep moving through the turn instead of braking.
+6. Use MPU6050 yaw, side-wall evidence, and timing limits to decide when the turn is complete.
+7. Recenter the steering and count the corner.
+8. Repeat until 12 corners are counted, then drive a short finish segment and stop.
 
 ## Tuning Method
 
@@ -25,10 +25,11 @@ Start with slow speed. Change one variable at a time:
 
 | Test | Variable | Expected Observation |
 | --- | --- | --- |
-| Corner entry | `FRONT_PREFIRE_CM` | Higher value turns earlier |
-| Turn radius | `TURN_HOLD_MS` | Longer value turns more |
-| Wall following | `SIDE_CORRECTION_GAIN` | Higher value reacts more strongly |
-| Stability | `BASE_SPEED_PWM` | Higher speed needs earlier turns |
+| Front safety | `FRONT_DANGER_CM` | Higher value starts emergency turns earlier |
+| Opening detection | `WALL_PRESENT_CM`, `WALL_LOST_CM` | Wider gap reduces false openings but may detect later |
+| Turn radius | `MIN_TURN_MS`, `MAX_TURN_MS` | Longer time turns more |
+| Yaw exit | `TURN_EXIT_YAW_DEG` | Higher value exits closer to a full 90 degree turn |
+| Stability | `SPEED_FAST`, `SPEED_TURN` | Higher speed needs earlier and smoother steering |
 
 ## Success Metrics
 
@@ -40,5 +41,5 @@ Start with slow speed. Change one variable at a time:
 
 ## Next Improvements
 
-The prefire strategy will become much stronger with an IMU or encoder. With yaw feedback, turns can stop at an actual 90 degree target instead of relying only on time. With an encoder, lap distance and parking maneuvers can be measured more reliably.
+The prefire strategy already uses MPU6050 yaw as one turn-exit signal. The next improvement is to compare yaw-based exits against real lap behavior and decide whether an encoder is needed for lap distance and parking maneuvers.
 

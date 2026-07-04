@@ -8,7 +8,7 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | --- | --- | --- |
 | Public GitHub repository | Public repo: `Yamilgmr/SKRobotics_WRO2026` | Done |
 | README in English with at least 5000 characters | Main README is written in English and exceeds the minimum target | Done |
-| Source code for programmed components | Arduino sketches in `src/` | Started |
+| Source code for programmed components | ESP32 Arduino sketches in `src/` | Started |
 | Vehicle photos | Six current prototype views are stored in `v-photos/` | Done for current prototype |
 | Team photos | Team photos are shown in `t-photos/README.md` | Started |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |

@@ -6,7 +6,7 @@ The first engineering goal is reliability. A slow robot that completes laps give
 
 ## Current Prototype
 
-The current prototype is based on an Arduino Mega 2560, three ultrasonic sensors, an AD002 steering servo, a DC motor, an L298N motor driver, a 3 x 3.7 V battery holder, and a planned HuskyLens AI camera for Obstacle Challenge color recognition.
+The current prototype is based on an ESP32 Acebott / ESP32 Dev Module, three HC-SR04 ultrasonic sensors, an MPU6050 IMU, an MG996R steering servo, a DC motor, an L298N motor driver, a 3 x 3.7 V battery holder, an 8-channel bidirectional level converter, and a planned HuskyLens AI camera for Obstacle Challenge color recognition.
 
 ## Development Strategy
 
@@ -14,7 +14,7 @@ The project is split into four stages:
 
 1. Build a safe electrical baseline with the L298N motor driver.
 2. Tune ultrasonic wall following and continuous corner prefire for the Open Challenge.
-3. Add orientation or distance feedback for better repeatability.
+3. Use MPU6050 yaw feedback for better turn repeatability.
 4. Integrate HuskyLens color recognition for Obstacle Challenge decisions.
 
 ## High-Level System Diagram
@@ -22,15 +22,16 @@ The project is split into four stages:
 ```mermaid
 flowchart TD
     A["Battery pack"] --> B["Power switch and protection"]
-    B --> C["Arduino Mega 2560"]
+    B --> C["ESP32 Acebott / ESP32 Dev Module"]
     B --> D["L298N motor driver"]
     D --> E["DC drive motor"]
-    C --> F["AD002 steering servo"]
+    C --> F["MG996R steering servo"]
     C --> G["Front ultrasonic sensor"]
     C --> H["Left ultrasonic sensor"]
     C --> I["Right ultrasonic sensor"]
-    C --> J["Start button and status LED"]
-    C --> K["HuskyLens AI camera"]
+    C --> J["Start button"]
+    C --> L["MPU6050 IMU"]
+    C --> K["HuskyLens AI camera TBD"]
 ```
 
 ## Main Performance Hypothesis
@@ -40,8 +41,8 @@ Our Open Challenge hypothesis is that the robot can complete laps faster if it s
 ## Current Limitations
 
 - L298N wiring and PWM behavior still need to be documented with test data.
-- No IMU or encoder yet, so turn angle and lap distance are estimated.
-- HuskyLens obstacle recognition is selected but not yet calibrated.
+- No encoder yet, so lap distance is estimated from corner count.
+- HuskyLens obstacle recognition is selected but not yet wired or calibrated.
 - Parking strategy is not selected yet.
 - No final CAD or mechanical measurements yet.
 

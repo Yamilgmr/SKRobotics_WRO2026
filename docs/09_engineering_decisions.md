@@ -2,18 +2,20 @@
 
 This document records current design reasoning. More detailed entries are stored in `engineering-journal/decision-log.md`.
 
-## Decision: Use Arduino Mega 2560
+## Decision: Use ESP32 Acebott / ESP32 Dev Module
 
 Reason:
 
-- Many pins for sensors and actuators.
-- Familiar Arduino development workflow.
-- Enough resources for ultrasonic sensing and servo control.
+- Supports the confirmed current wiring and ESP32 base firmware.
+- Provides PWM channels for the MG996R steering servo and L298N motor speed.
+- Provides I2C for the MPU6050 and possible future HuskyLens integration.
+- Still keeps an Arduino IDE workflow that the team can test quickly.
 
 Trade-off:
 
-- Limited processing for advanced computer vision.
-- Future vision may require a dedicated sensor or SBC.
+- ESP32 GPIO uses 3.3 V logic, so 5 V sensor signals need level conversion.
+- Some GPIO pins are input-only, so the pin map must be followed carefully.
+- The team must document board selection and exact upload settings.
 
 ## Decision: Start With Ultrasonic Wall Following
 
@@ -34,7 +36,7 @@ Trade-off:
 Reason:
 
 - The L298N is available to the team.
-- It is simple to integrate with Arduino Mega using PWM and direction pins.
+- It is simple to integrate with ESP32 PWM and direction pins.
 - It allows the robot to begin motion testing before choosing a more efficient driver.
 
 Trade-off:
@@ -48,13 +50,13 @@ Trade-off:
 Reason:
 
 - Ultrasonic sensors can measure distance but cannot classify red and green traffic signs.
-- HuskyLens can detect visual features and send compact information to the Arduino.
-- This keeps the Arduino Mega as the main controller while adding color/object perception.
+- HuskyLens can detect visual features and send compact information to the ESP32.
+- This keeps the ESP32 as the main controller while adding color/object perception.
 
 Trade-off:
 
 - The camera must be mounted rigidly and tested under competition lighting.
-- The team must decide the communication mode between HuskyLens and Arduino.
+- The team must decide the communication mode between HuskyLens and ESP32.
 - Parking detection is still unresolved and needs a separate decision.
 
 ## Decision: Document Missing Systems Honestly

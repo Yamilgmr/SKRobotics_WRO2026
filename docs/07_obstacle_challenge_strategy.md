@@ -2,9 +2,9 @@
 
 ## Current Status
 
-The obstacle strategy is in the planning and sensor-integration stage. The team plans to use a HuskyLens AI camera to detect the red and green traffic signs and send the detected color to the Arduino Mega. The Arduino will then choose the correct steering maneuver.
+The obstacle strategy is in the planning and sensor-integration stage. The team plans to use a HuskyLens AI camera to detect the red and green traffic signs and send the detected color to the ESP32. The ESP32 will then choose the correct steering maneuver.
 
-Parking is still unresolved. The team has not yet selected whether the robot will detect the magenta parking box with the HuskyLens, another color sensor, distance geometry, or a timed/encoder-based approach.
+The HuskyLens is selected but not integrated into the current wiring or firmware yet. Parking is still unresolved. The team has not yet selected whether the robot will detect the magenta parking box with the HuskyLens, another color sensor, distance geometry, or a timed/encoder-based approach.
 
 ## Rule-Based Requirement
 
@@ -14,7 +14,7 @@ The robot must pass red and green traffic signs on the correct side. It must als
 
 | Option | Benefit | Risk |
 | --- | --- | --- |
-| HuskyLens AI camera | Arduino-friendly object/color recognition without a separate computer | Needs stable mounting, training, and lighting tests |
+| HuskyLens AI camera | Microcontroller-friendly object/color recognition without a separate computer | Needs stable mounting, training, and lighting tests |
 | Ultrasonic sensors | Reliable short-distance wall and corner information | Cannot identify block color |
 | Future parking sensor/logic | Needed for final parking score | Method is not selected yet |
 
@@ -54,6 +54,6 @@ These functions should be implemented after the HuskyLens wiring, communication 
 - Detection accuracy table.
 - False positive and false negative examples.
 - Recovery behavior after each obstacle.
-- Communication test between HuskyLens and Arduino.
+- Communication test between HuskyLens and ESP32.
 - Parking marker detection tests.
 

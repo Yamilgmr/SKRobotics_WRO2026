@@ -1,287 +1,570 @@
-#include <Servo.h>
-#include <NewPing.h>
-
 /*
-  SKRobotics WRO 2026 - Open Challenge starter firmware
+  SKRobotics WRO Future Engineers 2026 - Open Challenge base firmware
+  Robot: ESP32 Acebott / ESP32 Dev Module + MPU6050 + 3 HC-SR04 + MG996R + L298N + DC motor
 
-  Hardware baseline:
-  - Arduino Mega 2560
-  - 3 ultrasonic sensors: front, left, right
-  - AD002 steering servo
-  - DC motor through an L298N motor driver
-
-  The motor output is disabled by default until the L298N wiring, common ground,
-  and wheel-lift safety test are verified.
+  Strategy:
+  1. Drive straight while the front path is clear.
+  2. Detect a corner when a side wall disappears and an opening is confirmed.
+  3. Steer into the opening without stopping.
+  4. Realign after the turn.
+  5. Count 12 corners for 3 laps and stop in the starting quadrant.
 */
 
-const bool MOTOR_OUTPUT_ENABLED = false;
+#include <Arduino.h>
+#include <Wire.h>
+#include <math.h>
 
-// ---------------- Pin map ----------------
-const uint8_t SERVO_PIN = 6;
-const uint8_t MOTOR_PWM_PIN = 5;
-const uint8_t MOTOR_DIR_PIN = 4;
+#if __has_include(<esp_arduino_version.h>)
+#include <esp_arduino_version.h>
+#endif
 
-const uint8_t US_FRONT_TRIG = 22;
-const uint8_t US_FRONT_ECHO = 23;
-const uint8_t US_LEFT_TRIG = 24;
-const uint8_t US_LEFT_ECHO = 25;
-const uint8_t US_RIGHT_TRIG = 26;
-const uint8_t US_RIGHT_ECHO = 27;
+#ifndef ESP_ARDUINO_VERSION_MAJOR
+#define ESP_ARDUINO_VERSION_MAJOR 2
+#endif
 
-const uint8_t START_BUTTON_PIN = A0;
-const uint8_t STATUS_LED_PIN = 13;
+static const int PIN_SERVO = 13;
 
-// ---------------- Sensor and actuator constants ----------------
-const unsigned int MAX_DISTANCE_CM = 200;
-const int SERVO_CENTER = 90;
-const int SERVO_LEFT_LIMIT = 55;
-const int SERVO_RIGHT_LIMIT = 125;
+static const int PIN_MOTOR_ENA = 14;
+static const int PIN_MOTOR_IN1 = 32;
+static const int PIN_MOTOR_IN2 = 33;
 
-// Positive steering offset means right, negative means left.
-const int TURN_DIRECTION = -1;
-const int TURN_SERVO_OFFSET = 30;
+static const int PIN_TRIG_FRONT = 25;
+static const int PIN_ECHO_FRONT = 34;
 
-// ---------------- Open Challenge tuning constants ----------------
-const int BASE_SPEED_PWM = 120;
-const int TARGET_SIDE_DISTANCE_CM = 30;
-const int FRONT_PREFIRE_CM = 38;
-const int SIDE_CORRECTION_GAIN = 2;
-const unsigned long TURN_HOLD_MS = 520;
-const unsigned long RECENTER_MS = 300;
-const uint8_t TOTAL_TURNS_TARGET = 12;
-const bool FOLLOW_LEFT_WALL = true;
+static const int PIN_TRIG_LEFT = 26;
+static const int PIN_ECHO_LEFT = 35;
 
-// ---------------- Objects ----------------
-Servo steeringServo;
-NewPing sonarFront(US_FRONT_TRIG, US_FRONT_ECHO, MAX_DISTANCE_CM);
-NewPing sonarLeft(US_LEFT_TRIG, US_LEFT_ECHO, MAX_DISTANCE_CM);
-NewPing sonarRight(US_RIGHT_TRIG, US_RIGHT_ECHO, MAX_DISTANCE_CM);
+static const int PIN_TRIG_RIGHT = 27;
+static const int PIN_ECHO_RIGHT = 36;
 
-enum RobotState {
-  WAIT_FOR_START,
-  FOLLOW_WALL,
-  PREFIRE_TURN,
-  RECENTER,
-  FINISHED
+static const int PIN_I2C_SDA = 21;
+static const int PIN_I2C_SCL = 22;
+
+static const int PIN_START_BUTTON = 23;
+
+static const bool WAIT_FOR_START_BUTTON = true;
+static const uint32_t AUTO_START_DELAY_MS = 0;
+
+static const bool MOTOR_INVERTED = false;
+
+enum TurnSide {
+  SIDE_UNKNOWN,
+  SIDE_LEFT,
+  SIDE_RIGHT
 };
 
-RobotState state = WAIT_FOR_START;
-unsigned long stateStartedAt = 0;
-unsigned long lastDebugAt = 0;
-uint8_t turnCount = 0;
+static const TurnSide FORCED_TURN_SIDE = SIDE_UNKNOWN;
+
+static const int SERVO_LEFT_ANGLE = 0;
+static const int SERVO_CENTER_ANGLE = 45;
+static const int SERVO_RIGHT_ANGLE = 90;
+
+static const int SERVO_US_LEFT = 1000;
+static const int SERVO_US_CENTER = 1500;
+static const int SERVO_US_RIGHT = 2000;
+
+static const int SPEED_STOP = 0;
+static const int SPEED_SLOW = 95;
+static const int SPEED_MEDIUM = 125;
+static const int SPEED_FAST = 155;
+static const int SPEED_TURN = 115;
+static const int SPEED_FINISH = 90;
+
+static const float FRONT_CLEAR_CM = 22.0;
+static const float FRONT_DANGER_CM = 12.0;
+static const float WALL_PRESENT_CM = 55.0;
+static const float WALL_LOST_CM = 85.0;
+static const float MAX_DISTANCE_CM = 200.0;
+
+static const int OPEN_CONFIRM_READS = 3;
+static const uint32_t SONAR_TIMEOUT_US = 12000;
+static const uint8_t SENSOR_WARMUP_READS = 8;
+
+static const uint32_t MIN_TURN_MS = 650;
+static const uint32_t MAX_TURN_MS = 2200;
+static const uint32_t TURN_SENSOR_BACKUP_MS = 1050;
+static const uint32_t REALIGN_MS = 550;
+static const uint32_t FINISH_DRIVE_MS = 700;
+static const uint32_t MIN_CORNER_INTERVAL_MS = 900;
+
+static const float TURN_EXIT_YAW_DEG = 65.0;
+
+static const int PWM_SERVO_CH = 0;
+static const int PWM_MOTOR_CH = 1;
+static const int PWM_SERVO_BITS = 16;
+static const int PWM_MOTOR_BITS = 8;
+static const int PWM_SERVO_FREQ = 50;
+static const int PWM_MOTOR_FREQ = 5000;
+
+static const uint8_t MPU6050_ADDR = 0x68;
+static bool gyroReady = false;
+static float gyroZOffsetRaw = 0.0;
+static float yawDeg = 0.0;
+static uint32_t lastGyroUs = 0;
+
+enum RobotState {
+  WAITING_FOR_START,
+  STRAIGHT,
+  TURNING,
+  REALIGNING,
+  FINISH_DRIVE,
+  STOPPED
+};
+
+struct Distances {
+  float front;
+  float left;
+  float right;
+};
+
+static RobotState state = WAITING_FOR_START;
+static TurnSide trackTurnSide = SIDE_UNKNOWN;
+static TurnSide activeTurnSide = SIDE_UNKNOWN;
+
+static Distances cm = {0.0, 0.0, 0.0};
+static int leftOpenCount = 0;
+static int rightOpenCount = 0;
+static bool leftWallSeen = false;
+static bool rightWallSeen = false;
+
+static int cornersDone = 0;
+static uint32_t stateStartedMs = 0;
+static uint32_t lastDebugMs = 0;
+static uint32_t lastCornerCountMs = 0;
+static float turnStartYawDeg = 0.0;
+
+static void pwmAttachCompat(int pin, int channel, int freq, int bits) {
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  (void)channel;
+  ledcAttach(pin, freq, bits);
+#else
+  ledcSetup(channel, freq, bits);
+  ledcAttachPin(pin, channel);
+#endif
+}
+
+static void pwmWriteCompat(int pin, int channel, int duty) {
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  (void)channel;
+  ledcWrite(pin, duty);
+#else
+  ledcWrite(channel, duty);
+#endif
+}
+
+static int clampInt(int value, int low, int high) {
+  if (value < low) return low;
+  if (value > high) return high;
+  return value;
+}
+
+static float clampFloat(float value, float low, float high) {
+  if (value < low) return low;
+  if (value > high) return high;
+  return value;
+}
+
+static float absAngleDelta(float a, float b) {
+  float d = a - b;
+  while (d > 180.0f) d -= 360.0f;
+  while (d < -180.0f) d += 360.0f;
+  return fabs(d);
+}
+
+static void setState(RobotState next) {
+  state = next;
+  stateStartedMs = millis();
+}
+
+static int servoAngleToMicros(int robotAngle) {
+  robotAngle = clampInt(robotAngle, SERVO_LEFT_ANGLE, SERVO_RIGHT_ANGLE);
+
+  if (robotAngle <= SERVO_CENTER_ANGLE) {
+    return map(robotAngle, SERVO_LEFT_ANGLE, SERVO_CENTER_ANGLE, SERVO_US_LEFT, SERVO_US_CENTER);
+  }
+
+  return map(robotAngle, SERVO_CENTER_ANGLE, SERVO_RIGHT_ANGLE, SERVO_US_CENTER, SERVO_US_RIGHT);
+}
+
+static void writeServoAngle(int robotAngle) {
+  int us = servoAngleToMicros(robotAngle);
+  int duty = (int)((uint32_t)us * ((1UL << PWM_SERVO_BITS) - 1) / 20000UL);
+  pwmWriteCompat(PIN_SERVO, PWM_SERVO_CH, duty);
+}
+
+static void motorStop() {
+  digitalWrite(PIN_MOTOR_IN1, LOW);
+  digitalWrite(PIN_MOTOR_IN2, LOW);
+  pwmWriteCompat(PIN_MOTOR_ENA, PWM_MOTOR_CH, SPEED_STOP);
+}
+
+static void motorForward(int speedPwm) {
+  speedPwm = clampInt(speedPwm, 0, 255);
+
+  if (!MOTOR_INVERTED) {
+    digitalWrite(PIN_MOTOR_IN1, HIGH);
+    digitalWrite(PIN_MOTOR_IN2, LOW);
+  } else {
+    digitalWrite(PIN_MOTOR_IN1, LOW);
+    digitalWrite(PIN_MOTOR_IN2, HIGH);
+  }
+
+  pwmWriteCompat(PIN_MOTOR_ENA, PWM_MOTOR_CH, speedPwm);
+}
+
+static float readUltrasonicCm(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  unsigned long duration = pulseIn(echoPin, HIGH, SONAR_TIMEOUT_US);
+  if (duration == 0) return MAX_DISTANCE_CM;
+
+  float distance = (duration * 0.0343f) / 2.0f;
+  if (distance < 2.0f || distance > MAX_DISTANCE_CM) return MAX_DISTANCE_CM;
+  return distance;
+}
+
+static float filterDistance(float previous, float raw) {
+  if (previous <= 0.1f) return raw;
+
+  if (raw > previous + 70.0f) {
+    return previous * 0.80f + raw * 0.20f;
+  }
+
+  return previous * 0.65f + raw * 0.35f;
+}
+
+static void readDistances() {
+  float f = readUltrasonicCm(PIN_TRIG_FRONT, PIN_ECHO_FRONT);
+  delay(6);
+  float l = readUltrasonicCm(PIN_TRIG_LEFT, PIN_ECHO_LEFT);
+  delay(6);
+  float r = readUltrasonicCm(PIN_TRIG_RIGHT, PIN_ECHO_RIGHT);
+
+  cm.front = filterDistance(cm.front, f);
+  cm.left = filterDistance(cm.left, l);
+  cm.right = filterDistance(cm.right, r);
+}
+
+static void warmupDistances() {
+  cm.front = 0.0f;
+  cm.left = 0.0f;
+  cm.right = 0.0f;
+
+  for (uint8_t i = 0; i < SENSOR_WARMUP_READS; i++) {
+    readDistances();
+    delay(20);
+  }
+
+  leftWallSeen = cm.left < WALL_PRESENT_CM;
+  rightWallSeen = cm.right < WALL_PRESENT_CM;
+  leftOpenCount = 0;
+  rightOpenCount = 0;
+}
+
+static void updateOpeningDetectors() {
+  if (cm.left < WALL_PRESENT_CM) {
+    leftWallSeen = true;
+    leftOpenCount = 0;
+  } else if (leftWallSeen && cm.left > WALL_LOST_CM) {
+    leftOpenCount++;
+  } else {
+    leftOpenCount = 0;
+  }
+
+  if (cm.right < WALL_PRESENT_CM) {
+    rightWallSeen = true;
+    rightOpenCount = 0;
+  } else if (rightWallSeen && cm.right > WALL_LOST_CM) {
+    rightOpenCount++;
+  } else {
+    rightOpenCount = 0;
+  }
+}
+
+static bool writeMpuRegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(MPU6050_ADDR);
+  Wire.write(reg);
+  Wire.write(value);
+  return Wire.endTransmission() == 0;
+}
+
+static int16_t readMpu16(uint8_t reg) {
+  Wire.beginTransmission(MPU6050_ADDR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return 0;
+
+  int bytesRead = Wire.requestFrom(MPU6050_ADDR, (uint8_t)2);
+  if (bytesRead != 2) return 0;
+
+  uint8_t high = Wire.read();
+  uint8_t low = Wire.read();
+  return (int16_t)((high << 8) | low);
+}
+
+static bool initGyro() {
+  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+  Wire.setClock(400000);
+
+  Wire.beginTransmission(MPU6050_ADDR);
+  if (Wire.endTransmission() != 0) {
+    return false;
+  }
+
+  writeMpuRegister(0x6B, 0x00);
+  delay(100);
+  writeMpuRegister(0x1B, 0x00);
+
+  long sum = 0;
+  const int samples = 600;
+  for (int i = 0; i < samples; i++) {
+    sum += readMpu16(0x47);
+    delay(2);
+  }
+
+  gyroZOffsetRaw = (float)sum / (float)samples;
+  yawDeg = 0.0f;
+  lastGyroUs = micros();
+  return true;
+}
+
+static void updateGyro() {
+  if (!gyroReady) return;
+
+  uint32_t now = micros();
+  float dt = (now - lastGyroUs) / 1000000.0f;
+  lastGyroUs = now;
+
+  int16_t rawZ = readMpu16(0x47);
+  float zDps = ((float)rawZ - gyroZOffsetRaw) / 131.0f;
+  yawDeg += zDps * dt;
+
+  while (yawDeg > 180.0f) yawDeg -= 360.0f;
+  while (yawDeg < -180.0f) yawDeg += 360.0f;
+}
+
+static void beginTurn(TurnSide side) {
+  if (FORCED_TURN_SIDE != SIDE_UNKNOWN) {
+    side = FORCED_TURN_SIDE;
+  }
+
+  activeTurnSide = side;
+
+  if (trackTurnSide == SIDE_UNKNOWN) {
+    trackTurnSide = side;
+  }
+
+  turnStartYawDeg = yawDeg;
+  leftOpenCount = 0;
+  rightOpenCount = 0;
+  setState(TURNING);
+}
+
+static int straightServoAngle() {
+  int angle = SERVO_CENTER_ANGLE;
+
+  bool bothWalls = cm.left < WALL_LOST_CM && cm.right < WALL_LOST_CM;
+  if (bothWalls) {
+    float error = cm.right - cm.left;
+    float correction = clampFloat(error * 0.10f, -10.0f, 10.0f);
+    angle = SERVO_CENTER_ANGLE + (int)correction;
+  }
+
+  return clampInt(angle, 32, 58);
+}
+
+static void handleStraight() {
+  updateOpeningDetectors();
+
+  bool leftConfirmed = leftOpenCount >= OPEN_CONFIRM_READS;
+  bool rightConfirmed = rightOpenCount >= OPEN_CONFIRM_READS;
+
+  if (trackTurnSide == SIDE_LEFT) {
+    rightConfirmed = false;
+  } else if (trackTurnSide == SIDE_RIGHT) {
+    leftConfirmed = false;
+  }
+
+  if (trackTurnSide == SIDE_UNKNOWN && leftConfirmed && rightConfirmed) {
+    if (cm.left > cm.right) {
+      rightConfirmed = false;
+    } else {
+      leftConfirmed = false;
+    }
+  }
+
+  if (rightConfirmed) {
+    beginTurn(SIDE_RIGHT);
+    return;
+  }
+
+  if (leftConfirmed) {
+    beginTurn(SIDE_LEFT);
+    return;
+  }
+
+  if (cm.front < FRONT_DANGER_CM) {
+    TurnSide emergencySide = trackTurnSide;
+    if (emergencySide == SIDE_UNKNOWN) {
+      emergencySide = (cm.right > cm.left) ? SIDE_RIGHT : SIDE_LEFT;
+    }
+    beginTurn(emergencySide);
+    return;
+  }
+
+  writeServoAngle(straightServoAngle());
+  motorForward(cm.front > FRONT_CLEAR_CM ? SPEED_FAST : SPEED_MEDIUM);
+}
+
+static void handleTurning() {
+  uint32_t elapsed = millis() - stateStartedMs;
+
+  if (activeTurnSide == SIDE_RIGHT) {
+    writeServoAngle(SERVO_RIGHT_ANGLE);
+  } else {
+    writeServoAngle(SERVO_LEFT_ANGLE);
+  }
+
+  motorForward(SPEED_TURN);
+
+  bool minTimeOk = elapsed >= MIN_TURN_MS;
+  bool maxTime = elapsed >= MAX_TURN_MS;
+  bool yawOk = gyroReady && absAngleDelta(yawDeg, turnStartYawDeg) >= TURN_EXIT_YAW_DEG;
+  bool frontSafe = cm.front > FRONT_DANGER_CM;
+  bool seesAnyWall = cm.left < WALL_PRESENT_CM || cm.right < WALL_PRESENT_CM;
+  bool sensorBackupOk = elapsed >= TURN_SENSOR_BACKUP_MS && seesAnyWall;
+  bool turnExitEvidence = yawOk || sensorBackupOk || (!gyroReady && seesAnyWall);
+
+  if ((minTimeOk && frontSafe && turnExitEvidence) || maxTime) {
+    setState(REALIGNING);
+  }
+}
+
+static void handleRealigning() {
+  writeServoAngle(SERVO_CENTER_ANGLE);
+  motorForward(SPEED_MEDIUM);
+
+  uint32_t elapsed = millis() - stateStartedMs;
+  bool frontSafe = cm.front > FRONT_DANGER_CM;
+  bool seesWall = cm.left < WALL_LOST_CM || cm.right < WALL_LOST_CM;
+  bool cornerIntervalOk = millis() - lastCornerCountMs >= MIN_CORNER_INTERVAL_MS;
+
+  if (elapsed >= REALIGN_MS && frontSafe && seesWall && cornerIntervalOk) {
+    cornersDone++;
+    lastCornerCountMs = millis();
+
+    leftWallSeen = cm.left < WALL_PRESENT_CM;
+    rightWallSeen = cm.right < WALL_PRESENT_CM;
+    leftOpenCount = 0;
+    rightOpenCount = 0;
+
+    if (cornersDone >= 12) {
+      setState(FINISH_DRIVE);
+    } else {
+      setState(STRAIGHT);
+    }
+  }
+}
+
+static void handleFinishDrive() {
+  writeServoAngle(SERVO_CENTER_ANGLE);
+  motorForward(SPEED_FINISH);
+
+  if (millis() - stateStartedMs >= FINISH_DRIVE_MS) {
+    motorStop();
+    writeServoAngle(SERVO_CENTER_ANGLE);
+    setState(STOPPED);
+  }
+}
+
+static void waitForStart() {
+  writeServoAngle(SERVO_CENTER_ANGLE);
+  motorStop();
+
+  if (!WAIT_FOR_START_BUTTON) {
+    if (millis() - stateStartedMs >= AUTO_START_DELAY_MS) {
+      setState(STRAIGHT);
+    }
+    return;
+  }
+
+  if (digitalRead(PIN_START_BUTTON) == LOW) {
+    delay(40);
+    if (digitalRead(PIN_START_BUTTON) == LOW) {
+      while (digitalRead(PIN_START_BUTTON) == LOW) {
+        delay(5);
+      }
+      setState(STRAIGHT);
+    }
+  }
+}
 
 void setup() {
   Serial.begin(115200);
+  delay(500);
 
-  pinMode(MOTOR_PWM_PIN, OUTPUT);
-  pinMode(MOTOR_DIR_PIN, OUTPUT);
-  pinMode(START_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(STATUS_LED_PIN, OUTPUT);
+  pinMode(PIN_MOTOR_IN1, OUTPUT);
+  pinMode(PIN_MOTOR_IN2, OUTPUT);
 
-  steeringServo.attach(SERVO_PIN);
-  writeSteering(SERVO_CENTER);
-  stopMotor();
+  pinMode(PIN_TRIG_FRONT, OUTPUT);
+  pinMode(PIN_TRIG_LEFT, OUTPUT);
+  pinMode(PIN_TRIG_RIGHT, OUTPUT);
 
-  digitalWrite(STATUS_LED_PIN, HIGH);
-  Serial.println("SKRobotics Open Challenge firmware ready.");
-  Serial.println("Motor output is disabled until MOTOR_OUTPUT_ENABLED is set to true.");
+  pinMode(PIN_ECHO_FRONT, INPUT);
+  pinMode(PIN_ECHO_LEFT, INPUT);
+  pinMode(PIN_ECHO_RIGHT, INPUT);
+
+  pinMode(PIN_START_BUTTON, INPUT_PULLUP);
+
+  pwmAttachCompat(PIN_SERVO, PWM_SERVO_CH, PWM_SERVO_FREQ, PWM_SERVO_BITS);
+  pwmAttachCompat(PIN_MOTOR_ENA, PWM_MOTOR_CH, PWM_MOTOR_FREQ, PWM_MOTOR_BITS);
+
+  writeServoAngle(SERVO_CENTER_ANGLE);
+  motorStop();
+
+  gyroReady = initGyro();
+
+  warmupDistances();
+
+  if (FORCED_TURN_SIDE != SIDE_UNKNOWN) {
+    trackTurnSide = FORCED_TURN_SIDE;
+  }
+
+  lastCornerCountMs = millis();
+  setState(WAITING_FOR_START);
 }
 
 void loop() {
+  readDistances();
+  updateGyro();
+
   switch (state) {
-    case WAIT_FOR_START:
-      handleWaitForStart();
+    case WAITING_FOR_START:
+      waitForStart();
       break;
-    case FOLLOW_WALL:
-      handleFollowWall();
+
+    case STRAIGHT:
+      handleStraight();
       break;
-    case PREFIRE_TURN:
-      handlePrefireTurn();
+
+    case TURNING:
+      handleTurning();
       break;
-    case RECENTER:
-      handleRecenter();
+
+    case REALIGNING:
+      handleRealigning();
       break;
-    case FINISHED:
-      handleFinished();
+
+    case FINISH_DRIVE:
+      handleFinishDrive();
+      break;
+
+    case STOPPED:
+      motorStop();
+      writeServoAngle(SERVO_CENTER_ANGLE);
       break;
   }
-
-  debugOutput();
 }
-
-void handleWaitForStart() {
-  stopMotor();
-  writeSteering(SERVO_CENTER);
-
-  if (digitalRead(START_BUTTON_PIN) == LOW) {
-    delay(250);
-    digitalWrite(STATUS_LED_PIN, LOW);
-    transitionTo(FOLLOW_WALL);
-  }
-}
-
-void handleFollowWall() {
-  setMotor(BASE_SPEED_PWM);
-
-  int steering = calculateWallFollowSteering();
-  writeSteering(steering);
-
-  int frontCm = readDistanceCm(sonarFront);
-  if (isValidDistance(frontCm) && frontCm <= FRONT_PREFIRE_CM) {
-    turnCount++;
-    transitionTo(PREFIRE_TURN);
-  }
-}
-
-void handlePrefireTurn() {
-  setMotor(BASE_SPEED_PWM);
-  int turnSteering = SERVO_CENTER + (TURN_DIRECTION * TURN_SERVO_OFFSET);
-  writeSteering(turnSteering);
-
-  if (millis() - stateStartedAt >= TURN_HOLD_MS) {
-    transitionTo(RECENTER);
-  }
-}
-
-void handleRecenter() {
-  setMotor(BASE_SPEED_PWM);
-  writeSteering(calculateWallFollowSteering());
-
-  if (millis() - stateStartedAt >= RECENTER_MS) {
-    if (turnCount >= TOTAL_TURNS_TARGET) {
-      transitionTo(FINISHED);
-    } else {
-      transitionTo(FOLLOW_WALL);
-    }
-  }
-}
-
-void handleFinished() {
-  stopMotor();
-  writeSteering(SERVO_CENTER);
-  digitalWrite(STATUS_LED_PIN, HIGH);
-}
-
-void transitionTo(RobotState nextState) {
-  state = nextState;
-  stateStartedAt = millis();
-
-  Serial.print("State -> ");
-  Serial.print(stateName(state));
-  Serial.print(" | turns=");
-  Serial.println(turnCount);
-}
-
-int calculateWallFollowSteering() {
-  NewPing &sideSensor = FOLLOW_LEFT_WALL ? sonarLeft : sonarRight;
-  int sideCm = readDistanceCm(sideSensor);
-
-  if (!isValidDistance(sideCm)) {
-    return SERVO_CENTER;
-  }
-
-  int error = TARGET_SIDE_DISTANCE_CM - sideCm;
-  int correction = constrain(error * SIDE_CORRECTION_GAIN, -25, 25);
-
-  if (FOLLOW_LEFT_WALL) {
-    return SERVO_CENTER + correction;
-  }
-
-  return SERVO_CENTER - correction;
-}
-
-int readDistanceCm(NewPing &sonar) {
-  const uint8_t samples = 5;
-  const int minValid = 3;
-  const int maxValid = 150;
-  int values[samples];
-  uint8_t validCount = 0;
-  int sum = 0;
-
-  for (uint8_t i = 0; i < samples; i++) {
-    int cm = sonar.ping_cm();
-    delay(3);
-    if (cm >= minValid && cm <= maxValid) {
-      values[validCount++] = cm;
-      sum += cm;
-    }
-  }
-
-  if (validCount == 0) {
-    return 0;
-  }
-
-  int average = sum / validCount;
-  int filteredSum = 0;
-  uint8_t filteredCount = 0;
-
-  for (uint8_t i = 0; i < validCount; i++) {
-    if (abs(values[i] - average) <= 10) {
-      filteredSum += values[i];
-      filteredCount++;
-    }
-  }
-
-  if (filteredCount == 0) {
-    return 0;
-  }
-
-  return filteredSum / filteredCount;
-}
-
-bool isValidDistance(int cm) {
-  return cm > 0;
-}
-
-void writeSteering(int angle) {
-  angle = constrain(angle, SERVO_LEFT_LIMIT, SERVO_RIGHT_LIMIT);
-  steeringServo.write(angle);
-}
-
-void setMotor(int pwm) {
-  pwm = constrain(pwm, -255, 255);
-
-  if (!MOTOR_OUTPUT_ENABLED) {
-    stopMotor();
-    return;
-  }
-
-  digitalWrite(MOTOR_DIR_PIN, pwm >= 0 ? HIGH : LOW);
-  analogWrite(MOTOR_PWM_PIN, abs(pwm));
-}
-
-void stopMotor() {
-  analogWrite(MOTOR_PWM_PIN, 0);
-  digitalWrite(MOTOR_DIR_PIN, LOW);
-}
-
-void debugOutput() {
-  if (millis() - lastDebugAt < 250) {
-    return;
-  }
-
-  lastDebugAt = millis();
-  Serial.print("state=");
-  Serial.print(stateName(state));
-  Serial.print(" turns=");
-  Serial.print(turnCount);
-  Serial.print(" front=");
-  Serial.print(readDistanceCm(sonarFront));
-  Serial.print(" left=");
-  Serial.print(readDistanceCm(sonarLeft));
-  Serial.print(" right=");
-  Serial.println(readDistanceCm(sonarRight));
-}
-
-const char *stateName(RobotState s) {
-  switch (s) {
-    case WAIT_FOR_START: return "WAIT_FOR_START";
-    case FOLLOW_WALL: return "FOLLOW_WALL";
-    case PREFIRE_TURN: return "PREFIRE_TURN";
-    case RECENTER: return "RECENTER";
-    case FINISHED: return "FINISHED";
-  }
-
-  return "UNKNOWN";
-}
-
