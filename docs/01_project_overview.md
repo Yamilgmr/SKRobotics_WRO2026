@@ -6,16 +6,16 @@ The first engineering goal is reliability. A slow robot that completes laps give
 
 ## Current Prototype
 
-The current prototype is based on an Arduino Mega 2560, three ultrasonic sensors, an AD002 steering servo, a DC motor, and a 3 x 3.7 V battery holder. The L298N motor driver was removed, so propulsion control is documented as a missing subsystem until a safer and more efficient driver is selected.
+The current prototype is based on an Arduino Mega 2560, three ultrasonic sensors, an AD002 steering servo, a DC motor, an L298N motor driver, a 3 x 3.7 V battery holder, and a planned HuskyLens AI camera for Obstacle Challenge color recognition.
 
 ## Development Strategy
 
 The project is split into four stages:
 
-1. Build a safe electrical baseline with a correct motor driver.
+1. Build a safe electrical baseline with the L298N motor driver.
 2. Tune ultrasonic wall following and continuous corner prefire for the Open Challenge.
 3. Add orientation or distance feedback for better repeatability.
-4. Add color or vision sensing for Obstacle Challenge decisions.
+4. Integrate HuskyLens color recognition for Obstacle Challenge decisions.
 
 ## High-Level System Diagram
 
@@ -23,14 +23,14 @@ The project is split into four stages:
 flowchart TD
     A["Battery pack"] --> B["Power switch and protection"]
     B --> C["Arduino Mega 2560"]
-    B --> D["Motor driver TBD"]
+    B --> D["L298N motor driver"]
     D --> E["DC drive motor"]
     C --> F["AD002 steering servo"]
     C --> G["Front ultrasonic sensor"]
     C --> H["Left ultrasonic sensor"]
     C --> I["Right ultrasonic sensor"]
     C --> J["Start button and status LED"]
-    C --> K["Future color or vision sensor"]
+    C --> K["HuskyLens AI camera"]
 ```
 
 ## Main Performance Hypothesis
@@ -39,10 +39,11 @@ Our Open Challenge hypothesis is that the robot can complete laps faster if it s
 
 ## Current Limitations
 
-- No selected motor driver after removing L298N.
+- L298N wiring and PWM behavior still need to be documented with test data.
 - No IMU or encoder yet, so turn angle and lap distance are estimated.
-- No color/vision sensor yet, so Obstacle Challenge color decisions are not solved.
-- No final CAD or vehicle photos yet.
+- HuskyLens obstacle recognition is selected but not yet calibrated.
+- Parking strategy is not selected yet.
+- No final CAD or mechanical measurements yet.
 
 These limitations are tracked intentionally. The repository should show the engineering process, not hide missing parts.
 

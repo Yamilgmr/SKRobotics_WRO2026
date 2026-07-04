@@ -6,16 +6,16 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 
 | Requirement | Repository Response | Status |
 | --- | --- | --- |
-| Public GitHub repository | Intended public repo: `Yamilgmr/SKRobotics_WRO2026` | Pending remote creation |
+| Public GitHub repository | Public repo: `Yamilgmr/SKRobotics_WRO2026` | Done |
 | README in English with at least 5000 characters | Main README is written in English and exceeds the minimum target | Done |
 | Source code for programmed components | Arduino sketches in `src/` | Started |
-| Vehicle photos | Placeholders in `v-photos/` | Pending real photos |
-| Team photos | Placeholders in `t-photos/` | Pending real photos |
+| Vehicle photos | Six current prototype views are stored in `v-photos/` | Done for current prototype |
+| Team photos | Team photos are shown in `t-photos/README.md` | Started |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |
 | Wiring and electromechanical diagrams | Markdown diagrams in `schemes/` | Started |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
 | Engineering process evidence | Decision log and test templates | Started |
-| At least three meaningful commits | Planned local commit sequence | Started |
+| At least three meaningful commits | Repository history contains multiple meaningful commits | Done |
 
 ## Rubric Alignment
 

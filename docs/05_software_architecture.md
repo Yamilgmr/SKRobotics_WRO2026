@@ -26,7 +26,7 @@ stateDiagram-v2
 | Sensor reading | Reads front, left, and right ultrasonic sensors with filtering |
 | Wall following | Converts side distance error into steering correction |
 | Turn prefire | Starts corner steering before collision risk |
-| Motor output | Sends PWM and direction commands to a future motor driver |
+| Motor output | Sends PWM and direction commands to the L298N motor driver after wiring is verified |
 | State management | Controls transitions and turn counting |
 | Debug output | Prints values for tuning through Serial Monitor |
 

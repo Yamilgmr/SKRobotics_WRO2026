@@ -2,28 +2,30 @@
 
 ## Current Status
 
-The obstacle strategy is not implemented yet because the current hardware cannot classify red and green pillars. Ultrasonic sensors can detect distance, but they cannot determine color. This is a critical gap for WRO 2026 Obstacle Challenge scoring.
+The obstacle strategy is in the planning and sensor-integration stage. The team plans to use a HuskyLens AI camera to detect the red and green traffic signs and send the detected color to the Arduino Mega. The Arduino will then choose the correct steering maneuver.
+
+Parking is still unresolved. The team has not yet selected whether the robot will detect the magenta parking box with the HuskyLens, another color sensor, distance geometry, or a timed/encoder-based approach.
 
 ## Rule-Based Requirement
 
 The robot must pass red and green traffic signs on the correct side. It must also complete three laps and later perform the parking task. The final strategy needs perception, decision-making, and recovery behavior.
 
-## Recommended Sensor Options
+## Selected Vision Direction
 
 | Option | Benefit | Risk |
 | --- | --- | --- |
-| PixyCam 2.1 | Fast color block detection, Arduino friendly | Needs training and mounting |
-| Camera plus SBC | Flexible computer vision | More complex power and software |
-| RGB color sensors | Cheap and simple | Harder to detect objects at distance |
+| HuskyLens AI camera | Arduino-friendly object/color recognition without a separate computer | Needs stable mounting, training, and lighting tests |
+| Ultrasonic sensors | Reliable short-distance wall and corner information | Cannot identify block color |
+| Future parking sensor/logic | Needed for final parking score | Method is not selected yet |
 
 ## Planned State Machine Extension
 
 ```mermaid
 stateDiagram-v2
     [*] --> FOLLOW_LANE
-    FOLLOW_LANE --> CLASSIFY_OBSTACLE: object detected
-    CLASSIFY_OBSTACLE --> EVADE_RED: red pillar
-    CLASSIFY_OBSTACLE --> EVADE_GREEN: green pillar
+    FOLLOW_LANE --> READ_HUSKYLENS: object detected
+    READ_HUSKYLENS --> EVADE_RED: red block
+    READ_HUSKYLENS --> EVADE_GREEN: green block
     EVADE_RED --> RECOVER_LANE
     EVADE_GREEN --> RECOVER_LANE
     RECOVER_LANE --> FOLLOW_LANE
@@ -34,22 +36,24 @@ stateDiagram-v2
 
 ## Placeholder Interfaces
 
-The Obstacle Challenge firmware contains placeholders for:
+The Obstacle Challenge firmware will need these interfaces:
 
-- `detectObstacleColor()`
+- `readHuskyLensColor()`
 - `handleRedObstacle()`
 - `handleGreenObstacle()`
+- `recoverAfterObstacle()`
 - `searchParkingBox()`
 - `performParkingManeuver()`
 
-These functions should be implemented only after the sensor is selected and calibrated.
+These functions should be implemented after the HuskyLens wiring, communication mode, and detection tests are documented.
 
 ## Evidence To Collect
 
-- Sensor choice comparison.
-- Color samples under competition lighting.
+- HuskyLens mounting photos.
+- Red and green detection samples under competition lighting.
 - Detection accuracy table.
 - False positive and false negative examples.
 - Recovery behavior after each obstacle.
+- Communication test between HuskyLens and Arduino.
 - Parking marker detection tests.
 

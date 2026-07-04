@@ -31,15 +31,15 @@ These are only placeholders. They must be replaced after using the servo sweep t
 
 ## Propulsion
 
-The DC motor provides forward motion. A motor driver is required between the Arduino and the motor. The driver should be selected by measuring or estimating the motor current and selecting a driver with safe current margin.
+The DC motor provides forward motion through an L298N motor driver. The L298N is used because it is available and easy to test with Arduino PWM signals. The team must still measure whether the voltage drop and heat are acceptable for repeated WRO runs.
 
-Selection criteria:
+Evidence to collect:
 
-- Supports the battery voltage.
-- Supports motor stall current.
-- Accepts Arduino PWM.
-- Has clear wiring documentation.
-- Wastes less power than the removed L298N.
+- Battery voltage before and after a run.
+- PWM values that start the motor reliably.
+- Motor response at low, medium, and high PWM.
+- Driver heat after repeated runs.
+- Whether the robot has enough speed and torque with the L298N installed.
 
 ## Prefire Cornering
 

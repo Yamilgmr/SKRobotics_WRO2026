@@ -5,9 +5,9 @@
   SKRobotics WRO 2026 - Obstacle Challenge architecture placeholder
 
   This sketch documents the intended architecture for the Obstacle Challenge.
-  It is not a final competition solution because the current hardware cannot
-  classify red and green traffic signs. Add a color or vision sensor before
-  implementing the obstacle behavior.
+  It is not a final competition solution yet because the HuskyLens camera still
+  needs mounting, wiring, training, and communication tests before obstacle
+  behavior can be trusted in a run.
 */
 
 const bool MOTOR_OUTPUT_ENABLED = false;
@@ -27,9 +27,9 @@ enum ObstacleColor {
 };
 
 enum RobotState {
-  WAIT_FOR_SENSOR_UPGRADE,
+  WAIT_FOR_HUSKYLENS_TESTS,
   FOLLOW_LANE,
-  CLASSIFY_OBSTACLE,
+  READ_HUSKYLENS,
   EVADE_RED,
   EVADE_GREEN,
   RECOVER_LANE,
@@ -38,7 +38,7 @@ enum RobotState {
   FINISHED
 };
 
-RobotState state = WAIT_FOR_SENSOR_UPGRADE;
+RobotState state = WAIT_FOR_HUSKYLENS_TESTS;
 
 void setup() {
   Serial.begin(115200);
@@ -50,19 +50,19 @@ void setup() {
   stopMotor();
 
   Serial.println("Obstacle Challenge placeholder loaded.");
-  Serial.println("Add a red/green vision or color sensor before competition use.");
+  Serial.println("HuskyLens integration must be tested before competition use.");
 }
 
 void loop() {
   switch (state) {
-    case WAIT_FOR_SENSOR_UPGRADE:
+    case WAIT_FOR_HUSKYLENS_TESTS:
       digitalWrite(STATUS_LED_PIN, millis() / 500 % 2);
       stopMotor();
       break;
     case FOLLOW_LANE:
       followLane();
       break;
-    case CLASSIFY_OBSTACLE:
+    case READ_HUSKYLENS:
       classifyAndTransition();
       break;
     case EVADE_RED:
@@ -87,7 +87,7 @@ void loop() {
 }
 
 ObstacleColor detectObstacleColor() {
-  // TODO: Implement after selecting PixyCam, RGB camera, or another color sensor.
+  // TODO: Implement after HuskyLens communication mode and color IDs are tested.
   return NO_OBSTACLE;
 }
 

@@ -1,15 +1,15 @@
 # Vehicle Photos
 
-This folder will contain the required vehicle photos from all sides.
+This folder contains the required vehicle photos from all sides.
 
-Required placeholders:
+Current vehicle photo set:
 
-- `front.jpg`
-- `back.jpg`
-- `left.jpg`
-- `right.jpg`
-- `top.jpg`
-- `bottom.jpg`
+- [Front view](front.jpg)
+- [Back view](back.jpg)
+- [Left side view](left.jpg)
+- [Right side view](right.jpg)
+- [Top view](top.jpg)
+- [Bottom view](bottom.jpg)
 
-Each image should be clear, well lit, and show the real competition vehicle. After each mechanical revision, add new photos or update the engineering journal with the revision date.
+These photos show the current prototype stage. The robot is still under active development, so new photos should be added whenever the chassis, wiring, sensor mounts, motor driver wiring, or camera mount changes significantly.
 

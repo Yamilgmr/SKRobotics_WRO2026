@@ -11,17 +11,20 @@ The robot uses three 3.7 V cells in a battery holder. The exact chemistry and cu
 | Arduino Mega 2560 | 5 V logic | TBD | Datasheet or measurement |
 | AD002 servo | TBD | TBD | Measure under steering load |
 | DC motor | Battery/driver output | TBD | Measure stall and running current |
-| Motor driver | Battery input, logic input | TBD | Select replacement |
+| L298N motor driver | Battery input, 5 V logic input | TBD | Measure heat and voltage drop during tests |
 | Ultrasonic sensors | 5 V | TBD | Datasheet |
+| HuskyLens AI camera | TBD | TBD | Confirm communication mode and supply voltage |
 
-## Required Driver Decision
+## Motor Driver Decision
 
-The L298N was removed. Before motor testing, select one replacement:
+The team will use the L298N for the first prototype. The reason is availability and easy Arduino integration. The trade-off is that the L298N is less efficient than newer motor drivers and may reduce motor voltage or heat up during long runs.
 
-- TB6612FNG if current is within limits.
-- BTS7960 or similar high-current driver if the motor draws more current.
-- ESC if the motor and power system fit that architecture.
-- Logic-level MOSFET stage only if direction control is not needed and the circuit is designed safely.
+Required evidence:
 
-The selected driver must be added to this document with wiring and test data.
+- L298N wiring diagram.
+- Battery voltage before and after a run.
+- PWM values tested.
+- Motor response at low, medium, and high PWM.
+- Driver temperature or heat observations.
+- Explanation of whether the L298N remains acceptable or should be replaced later.
 

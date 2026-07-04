@@ -22,7 +22,7 @@ The WRO 2026 rules evaluate not only the final vehicle performance, but also the
 4. System thinking and engineering decisions.
 5. Reproducibility and GitHub repository quality.
 
-Our current vehicle is in an early development stage. The repository already contains the required WRO folder structure, starter Arduino code, proposed test routines, wiring placeholders, strategy documents, and engineering journal templates. Photos, CAD files, videos, exact measurements, and final calibration data will be added as the physical robot evolves.
+Our current vehicle is in an early development stage. The repository already contains the required WRO folder structure, starter Arduino code, proposed test routines, wiring placeholders, strategy documents, engineering journal templates, and the current six-view vehicle photo set. CAD files, videos, exact measurements, diagrams, and final calibration data will be added as the physical robot evolves.
 
 ## Current Hardware Baseline
 
@@ -35,9 +35,10 @@ The current prototype uses the following parts:
 | Steering | AD002 servo | Front axle steering | Selected |
 | Propulsion | DC motor | Rear drive motor | Selected |
 | Battery | 3 x 3.7 V battery holder | Main power source | Selected |
-| Motor driver | Not selected after removing L298N | Safe DC motor control | Required |
+| Motor driver | L298N | DC motor direction and PWM control | Selected for first prototype |
+| Vision | HuskyLens AI camera | Planned red/green obstacle color recognition | Selected for Obstacle Challenge |
 
-Important safety note: a DC motor must not be powered directly from Arduino pins. Since the L298N was removed, the next hardware milestone is selecting and documenting a suitable motor driver, MOSFET driver, or ESC. Until then, the firmware keeps motor output disabled by default and treats motor control as a driver abstraction.
+Important safety note: a DC motor must not be powered directly from Arduino pins. The team will use an L298N motor driver for the first working prototype because it is available and simple to wire with Arduino. The L298N is not the most efficient driver, so its voltage drop, heat, and current limits must be documented during testing. Until final wiring is checked, the firmware keeps motor output disabled by default.
 
 ## Technical Direction
 
@@ -56,10 +57,10 @@ This is a practical first approach for the hardware currently available. It is n
 
 - An IMU for yaw-based 90 degree turns and drift correction.
 - An encoder for repeatable distance and parking movement.
-- A color or vision sensor for obstacle challenge red and green pillar classification.
-- A documented motor driver with repeatable speed control.
+- HuskyLens color/block recognition for obstacle challenge red and green pillar classification.
+- A tested L298N wiring and power setup with repeatable speed control.
 
-For the Obstacle Challenge, the current hardware does not yet include a reliable way to distinguish red and green pillars. The repository includes an obstacle strategy document and code placeholders so that a future PixyCam, color camera, or other color sensing module can be integrated without rewriting the whole state machine.
+For the Obstacle Challenge, the planned strategy is to use the HuskyLens AI camera to detect the red and green blocks and send the classification result to the Arduino Mega. The Arduino will use that information to decide the correct evasion side. The final parking strategy is still under research and will be documented after the team chooses how to detect or approach the magenta parking box.
 
 ## WRO Repository Structure
 
@@ -113,21 +114,21 @@ The starter firmware is designed around a finite state machine. That makes the r
 - `RECENTER`: return the steering toward the lane after a corner.
 - `FINISHED`: stop after the estimated number of turns for three laps.
 
-The first version avoids depending on sensors that are not currently installed. It uses only the Arduino Mega, three ultrasonic sensors, steering servo, and a generic motor driver interface. Constants are grouped at the top of the sketch so testing can be done methodically.
+The first version avoids depending on unfinished calibration data. It uses the Arduino Mega, three ultrasonic sensors, steering servo, and a motor driver interface that will be wired to the L298N after the final pin map is confirmed. Constants are grouped at the top of the sketch so testing can be done methodically.
 
 The firmware also includes measurement filtering for ultrasonic sensors. Each distance reading is sampled several times, invalid readings are rejected, and the remaining values are averaged. This is necessary because ultrasonic sensors can be noisy near angled walls, soft surfaces, or curved corners.
 
 ## Motor Driver Status
 
-The L298N was removed. This is a good engineering decision to revisit because the L298N is inefficient and can waste voltage as heat, but removing it leaves a missing subsystem: the DC motor still needs a safe power driver.
+The team will use the L298N for the first prototype. This is a practical choice because it is available, familiar, and compatible with Arduino PWM/direction control. The engineering trade-off is that the L298N is inefficient compared with modern MOSFET-based drivers and can waste voltage as heat.
 
-A good replacement should be documented with:
+The L298N setup must be documented with:
 
-- Maximum continuous current and stall current margin.
+- Motor voltage and expected current.
 - Voltage compatibility with the battery pack.
 - PWM input compatibility with Arduino Mega 5 V logic.
-- Heat dissipation or current limiting.
-- Wiring diagram and fuse/switch plan.
+- Heat observations during repeated runs.
+- Wiring diagram, common ground, and battery connection.
 - Test results at low, medium, and high PWM.
 
 Until this is solved, the code uses:
@@ -136,7 +137,7 @@ Until this is solved, the code uses:
 const bool MOTOR_OUTPUT_ENABLED = false;
 ```
 
-Set this to `true` only after a proper driver is installed and the wiring has been reviewed.
+Set this to `true` only after the L298N is wired, the common ground is verified, and the robot has been tested safely with the wheels lifted.
 
 ## Open Challenge Scoring Focus
 
@@ -153,16 +154,16 @@ The team goal is to make the robot complete laps reliably before increasing spee
 
 ## Obstacle Challenge Scoring Focus
 
-The Obstacle Challenge requires the robot to pass red and green traffic signs on the correct side and later perform parking. The current robot cannot classify object color with only ultrasonic sensors. This repository therefore treats obstacle strategy as a planned extension.
+The Obstacle Challenge requires the robot to pass red and green traffic signs on the correct side and later perform parking. The team plans to use the HuskyLens AI camera for red/green block recognition and send the detected color to the Arduino Mega for decision-making. Parking is still an open design problem.
 
 Recommended next steps:
 
-1. Select a color/vision sensor.
-2. Record sample images or sensor readings under competition lighting.
-3. Define red and green detection thresholds.
-4. Add an obstacle classifier module.
-5. Add an evasion state to the finite state machine.
-6. Add parking detection using magenta markers or a documented alternative.
+1. Mount the HuskyLens with a stable view of the traffic signs.
+2. Train and test red and green block recognition under competition lighting.
+3. Define the serial/I2C communication method between HuskyLens and Arduino.
+4. Add an obstacle classifier module to the Arduino firmware.
+5. Add evasion states to the finite state machine.
+6. Choose and document a parking detection method for the magenta parking box.
 
 This prevents the team from pretending a missing capability exists. Judges usually reward honest engineering reasoning more than undocumented claims.
 
@@ -200,13 +201,15 @@ Priority tests:
 - [x] Calibration sketches.
 - [x] Wiring and power placeholders.
 - [x] Engineering journal templates.
+- [x] Current vehicle photos from all required angles.
 - [ ] Final wiring diagram photo/export.
-- [ ] Vehicle photos from all required angles.
-- [ ] Team photos.
+- [ ] Final competition vehicle photos after wiring and mounts are finished.
+- [ ] Team photo files stored directly in `t-photos/`.
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.
-- [ ] Final motor driver selection.
-- [ ] Obstacle color detection hardware and data.
+- [ ] L298N wiring and PWM test data.
+- [ ] HuskyLens color detection data.
+- [ ] Parking strategy.
 - [ ] Final competition code.
 
 ## Attribution

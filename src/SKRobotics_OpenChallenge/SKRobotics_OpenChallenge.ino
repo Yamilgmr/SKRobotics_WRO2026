@@ -8,10 +8,10 @@
   - Arduino Mega 2560
   - 3 ultrasonic sensors: front, left, right
   - AD002 steering servo
-  - DC motor through a future motor driver
+  - DC motor through an L298N motor driver
 
-  The motor output is disabled by default because the L298N was removed and
-  the replacement driver is still TBD.
+  The motor output is disabled by default until the L298N wiring, common ground,
+  and wheel-lift safety test are verified.
 */
 
 const bool MOTOR_OUTPUT_ENABLED = false;
