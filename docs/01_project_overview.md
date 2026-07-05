@@ -6,45 +6,44 @@ The first engineering goal is reliability. A slow robot that completes laps give
 
 ## Current Prototype
 
-The current prototype is based on an ESP32 Acebott / ESP32 Dev Module, three HC-SR04 ultrasonic sensors, an MPU6050 IMU, an MG996R steering servo, a DC motor, an L298N motor driver, a 3 x 3.7 V battery holder, an 8-channel bidirectional level converter, and a planned HuskyLens AI camera for Obstacle Challenge color recognition.
+The current prototype is based on an Arduino Mega 2560, two HC-SR04 ultrasonic sensors, an MG996R steering servo, a gyroscope/IMU, an L298N motor driver, a DC motor, a breadboard, and two 3.7 V cells wired for 7.4 V nominal.
 
 ## Development Strategy
 
 The project is split into four stages:
 
-1. Build a safe electrical baseline with the L298N motor driver.
-2. Tune ultrasonic wall following and continuous corner prefire for the Open Challenge.
-3. Use MPU6050 yaw feedback for better turn repeatability.
-4. Integrate HuskyLens color recognition for Obstacle Challenge decisions.
+1. Verify safe wiring with the Arduino Mega, L298N, servo, sensors, and battery pack.
+2. Tune right-wall following and continuous corner prefire for the Open Challenge.
+3. Use gyroscope yaw feedback to improve turn repeatability.
+4. Choose a color or vision sensor for Obstacle Challenge decisions.
 
 ## High-Level System Diagram
 
 ```mermaid
 flowchart TD
-    A["Battery pack"] --> B["Power switch and protection"]
-    B --> C["ESP32 Acebott / ESP32 Dev Module"]
+    A["2 x 3.7 V battery pack"] --> B["Power switch and protection"]
+    B --> C["Arduino Mega 2560"]
     B --> D["L298N motor driver"]
     D --> E["DC drive motor"]
-    C --> F["MG996R steering servo"]
+    C --> F["MG996R steering servo signal"]
     C --> G["Front ultrasonic sensor"]
-    C --> H["Left ultrasonic sensor"]
-    C --> I["Right ultrasonic sensor"]
+    C --> H["Right ultrasonic sensor"]
+    C --> I["Gyroscope / IMU over I2C"]
     C --> J["Start button"]
-    C --> L["MPU6050 IMU"]
-    C --> K["HuskyLens AI camera TBD"]
+    C --> D
 ```
 
 ## Main Performance Hypothesis
 
-Our Open Challenge hypothesis is that the robot can complete laps faster if it starts steering before the front wall is too close. This "prefire" turning approach avoids a full stop-and-turn sequence. The risk is that turning too early causes the robot to cut into the inner wall or miss the next lane. The tuning process will compare different front distance thresholds, steering angles, and turn hold times.
+Our Open Challenge hypothesis is that the robot can complete laps faster if it starts steering before the front wall is too close. This prefire turning approach avoids a full stop-and-turn sequence. The risk is that turning too early causes the robot to cut into the inner wall or miss the next lane. The tuning process will compare different front distance thresholds, steering angles, turn timing, and gyroscope exit thresholds.
 
 ## Current Limitations
 
-- L298N wiring and PWM behavior still need to be documented with test data.
-- No encoder yet, so lap distance is estimated from corner count.
-- HuskyLens obstacle recognition is selected but not yet wired or calibrated.
+- Only front and right ultrasonic sensors are installed.
+- Left-wall recovery is limited because there is no left ultrasonic sensor.
+- The gyroscope model and calibration constants must be confirmed.
+- Obstacle Challenge color recognition hardware is not selected in the current component list.
 - Parking strategy is not selected yet.
 - No final CAD or mechanical measurements yet.
 
 These limitations are tracked intentionally. The repository should show the engineering process, not hide missing parts.
-

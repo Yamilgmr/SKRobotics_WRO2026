@@ -6,6 +6,8 @@ The team is preparing for WRO 2026 Future Engineers. At this point in the design
 
 Update on 2026-07-04: the current confirmed control architecture is now an ESP32 Acebott / ESP32 Dev Module with an MG996R steering servo, MPU6050 IMU, three HC-SR04 ultrasonic sensors, L298N motor driver, and 8-channel bidirectional level converter. The earlier Arduino Mega notes remain as project history, but the active pin map and firmware now target ESP32.
 
+Update on 2026-07-05: due to urgent practical constraints, the active control architecture returned to Arduino Mega 2560. The current component list is Arduino Mega 2560, L298N motor driver, two ultrasonic sensors mounted front and right, MG996R steering servo, gyroscope/IMU, breadboard, two 3.7 V cells for 7.4 V nominal, and one DC motor. The ESP32 wiring is now treated as an archived iteration, not the active baseline.
+
 ## Design Direction
 
 The first goal is an Open Challenge baseline using continuous wall following and predictive turns. The robot should not stop before every curve. Instead, it should detect an upcoming wall with the front ultrasonic sensor and start steering before reaching the corner.
@@ -16,13 +18,13 @@ The DC motor cannot be controlled safely until a motor driver is selected and wi
 
 ## Update On 2026-07-04
 
-The team decided to use the L298N again for the first motor-control prototype. This is not the most efficient motor driver, but it is available and simple to test with ESP32 PWM and direction pins. The next evidence needed is the L298N wiring diagram, PWM response, and heat behavior during repeated runs.
+The team decided to use the L298N again for the first motor-control prototype. This is not the most efficient motor driver, but it is available and simple to test with Arduino Mega PWM and direction pins. The next evidence needed is the L298N wiring diagram, PWM response, and heat behavior during repeated runs.
 
 ## Next Tests
 
 1. Verify ultrasonic sensor readings at fixed distances.
 2. Find servo center and safe steering limits.
-3. Verify L298N wiring, level converter wiring, and common ground.
+3. Verify L298N wiring, breadboard connections, and common ground.
 4. Test low-speed motion with robot lifted.
 5. Tune first corner prefire behavior.
 

@@ -8,5 +8,5 @@ Current files:
 
 | File | Description |
 | --- | --- |
-| `level_converter.png` | 8-channel bidirectional level conversion board used to protect ESP32 GPIO when interfacing with 5 V devices. |
+| `level_converter.png` | Archived photo from the previous ESP32 wiring attempt. It is not part of the current Arduino Mega baseline unless the team reintroduces a 3.3 V device later. |
 

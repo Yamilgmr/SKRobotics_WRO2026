@@ -1,5 +1,6 @@
 date,sensor,actual_distance_cm,reading_1_cm,reading_2_cm,reading_3_cm,reading_4_cm,reading_5_cm,average_cm,notes
 TBD,front,10,,,,,,,placeholder
-TBD,left,20,,,,,,,placeholder
-TBD,right,30,,,,,,,placeholder
+TBD,front,20,,,,,,,placeholder
+TBD,right,10,,,,,,,placeholder
+TBD,right,20,,,,,,,placeholder
 

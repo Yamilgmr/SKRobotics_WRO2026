@@ -14,3 +14,11 @@
 - Updated calibration sketches for ESP32 ultrasonic, servo, and L298N testing.
 - Added a hardware evidence photo for the level converter.
 
+## 2026-07-05
+
+- Returned the active hardware baseline to Arduino Mega 2560 after urgent hardware constraints.
+- Updated the component list to Arduino Mega 2560, L298N, two ultrasonic sensors, MG996R servo, gyroscope/IMU, breadboard, 2 x 3.7 V battery pack, and DC motor.
+- Replaced the active pin map with an Arduino Mega draft pin map for the reduced sensor set.
+- Reworked the Open Challenge firmware and calibration sketches for Arduino Mega.
+- Marked Obstacle Challenge color recognition as unresolved because no color/vision sensor is currently in the hardware list.
+

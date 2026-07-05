@@ -6,7 +6,7 @@ The robot uses a car-like layout:
 
 - Rear propulsion with one DC motor.
 - Front steering controlled by an MG996R servo.
-- Ultrasonic sensors mounted forward, left, and right.
+- Ultrasonic sensors mounted forward and on the right side.
 
 This layout matches the Future Engineers challenge because the robot must move smoothly around a road-like track and perform controlled turns rather than rotate in place.
 
@@ -22,16 +22,16 @@ The MG996R servo controls the front axle direction. The first tuning task is to 
 The starter code uses these default values:
 
 ```cpp
-static const int SERVO_LEFT_ANGLE = 0;
-static const int SERVO_CENTER_ANGLE = 45;
-static const int SERVO_RIGHT_ANGLE = 90;
+static const int SERVO_CENTER = 90;
+static const int SERVO_LEFT_LIMIT = 55;
+static const int SERVO_RIGHT_LIMIT = 125;
 ```
 
 These values match the current base firmware convention. They still need physical validation with the wheels lifted, because the safest software limits depend on the final servo horn and steering linkage geometry.
 
 ## Propulsion
 
-The DC motor provides forward motion through an L298N motor driver. The L298N is used because it is available and easy to test with ESP32 PWM and direction signals. The team must still measure whether the voltage drop and heat are acceptable for repeated WRO runs.
+The DC motor provides forward motion through an L298N motor driver. The L298N is used because it is available and easy to test with Arduino Mega PWM and direction signals. The team must still measure whether the voltage drop and heat are acceptable for repeated WRO runs.
 
 Evidence to collect:
 
@@ -43,18 +43,19 @@ Evidence to collect:
 
 ## Prefire Cornering
 
-The team wants the robot to turn without stopping. The prefire method starts a steering turn when the side sensors confirm an opening, with the front sensor still acting as an emergency trigger if a wall becomes too close. The expected benefit is lower lap time. The risk is lower repeatability if the robot enters corners from different lateral positions.
+The team wants the robot to turn without stopping. The current prefire method starts a steering turn when the front sensor sees an upcoming wall while the right sensor supports wall following before and after the turn. The expected benefit is lower lap time. The risk is lower repeatability because the robot no longer has a left ultrasonic sensor.
 
 Variables to tune:
 
 - `FRONT_DANGER_CM`
+- `FRONT_TURN_CM`
+- `TARGET_RIGHT_DISTANCE_CM`
+- `RIGHT_CORRECTION_GAIN`
 - `MIN_TURN_MS`
 - `MAX_TURN_MS`
 - `TURN_EXIT_YAW_DEG`
-- `SERVO_LEFT_ANGLE`
-- `SERVO_RIGHT_ANGLE`
-- `WALL_PRESENT_CM`
-- `WALL_LOST_CM`
+- `SERVO_LEFT_LIMIT`
+- `SERVO_RIGHT_LIMIT`
 
 ## Mechanical Evidence To Add
 

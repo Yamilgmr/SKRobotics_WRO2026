@@ -2,41 +2,40 @@
 
 This document records current design reasoning. More detailed entries are stored in `engineering-journal/decision-log.md`.
 
-## Decision: Use ESP32 Acebott / ESP32 Dev Module
+## Decision: Return To Arduino Mega 2560 As Active Controller
 
 Reason:
 
-- Supports the confirmed current wiring and ESP32 base firmware.
-- Provides PWM channels for the MG996R steering servo and L298N motor speed.
-- Provides I2C for the MPU6050 and possible future HuskyLens integration.
-- Still keeps an Arduino IDE workflow that the team can test quickly.
+- The team had urgent practical constraints and needed a controller that could be wired and tested immediately.
+- Arduino Mega 2560 provides many 5 V digital pins for sensors, servo signal, L298N control, and I2C gyroscope communication.
+- It is compatible with the current two-ultrasonic, MG996R, L298N, and gyroscope baseline.
 
 Trade-off:
 
-- ESP32 GPIO uses 3.3 V logic, so 5 V sensor signals need level conversion.
-- Some GPIO pins are input-only, so the pin map must be followed carefully.
-- The team must document board selection and exact upload settings.
+- The ESP32 pin map and level-converter work are no longer the active baseline.
+- Arduino Mega has less processing capability for advanced vision.
+- A future color/vision sensor must be selected for the Obstacle Challenge.
 
-## Decision: Start With Ultrasonic Wall Following
+## Decision: Use Two Ultrasonic Sensors For The First Mega Baseline
 
 Reason:
 
-- Hardware is already available.
-- Simple to test.
-- Good baseline for Open Challenge movement.
+- The front sensor can detect upcoming walls.
+- The right sensor can support right-wall following.
+- This is enough to start Open Challenge tuning with the available hardware.
 
 Trade-off:
 
-- Ultrasonic readings are noisy on angled surfaces.
-- No color classification.
-- No direct yaw measurement.
+- No left-side distance measurement.
+- Recovery after corners is harder.
+- The robot depends more on gyroscope yaw and careful timing.
 
 ## Decision: Use L298N For The First Motor-Control Prototype
 
 Reason:
 
 - The L298N is available to the team.
-- It is simple to integrate with ESP32 PWM and direction pins.
+- It is simple to integrate with Arduino Mega PWM and direction pins.
 - It allows the robot to begin motion testing before choosing a more efficient driver.
 
 Trade-off:
@@ -45,29 +44,15 @@ Trade-off:
 - Voltage drop and heat may reduce the robot's speed and consistency.
 - The team must document PWM response and heat behavior to decide if it remains acceptable.
 
-## Decision: Use HuskyLens For Obstacle Color Detection
+## Decision: Document Missing Obstacle Perception Honestly
 
 Reason:
 
-- Ultrasonic sensors can measure distance but cannot classify red and green traffic signs.
-- HuskyLens can detect visual features and send compact information to the ESP32.
-- This keeps the ESP32 as the main controller while adding color/object perception.
-
-Trade-off:
-
-- The camera must be mounted rigidly and tested under competition lighting.
-- The team must decide the communication mode between HuskyLens and ESP32.
-- Parking detection is still unresolved and needs a separate decision.
-
-## Decision: Document Missing Systems Honestly
-
-Reason:
-
+- The current component list does not include a color or vision sensor.
 - WRO documentation rewards engineering reasoning, testing, and reproducibility.
 - A clear risk list is more useful than pretending the robot is complete.
 
 Trade-off:
 
 - The repository shows incomplete items early in the season.
-- The team must keep updating evidence as the robot improves.
-
+- The team must choose a red/green detection method before the Obstacle Challenge can be competitive.

@@ -1,56 +1,26 @@
-#include <Arduino.h>
-#include <Wire.h>
-
 /*
   SKRobotics WRO 2026 - Obstacle Challenge architecture placeholder
 
-  Target hardware:
-  - ESP32 Acebott / ESP32 Dev Module
-  - MG996R steering servo on GPIO 13
-  - L298N motor driver on GPIO 14, GPIO 32, GPIO 33
-  - MPU6050 on I2C GPIO 21 / GPIO 22
-  - HuskyLens selected for red/green traffic-sign detection, not integrated yet
+  Target controller: Arduino Mega 2560
 
-  This is not a final competition solution. It documents the intended software
-  structure while the camera mount, communication method, color IDs, and parking
-  strategy are still being tested.
+  Current status:
+  - The current hardware list does not include a camera or color sensor.
+  - Red/green traffic-sign detection cannot be implemented reliably yet.
+  - This sketch documents the future state structure without pretending the
+    missing perception hardware exists.
 */
 
-#if __has_include(<esp_arduino_version.h>)
-#include <esp_arduino_version.h>
-#endif
-
-#ifndef ESP_ARDUINO_VERSION_MAJOR
-#define ESP_ARDUINO_VERSION_MAJOR 2
-#endif
-
-static const int PIN_SERVO = 13;
-static const int PIN_MOTOR_ENA = 14;
-static const int PIN_MOTOR_IN1 = 32;
-static const int PIN_MOTOR_IN2 = 33;
-static const int PIN_I2C_SDA = 21;
-static const int PIN_I2C_SCL = 22;
-
-static const int PWM_SERVO_CH = 0;
-static const int PWM_MOTOR_CH = 1;
-static const int PWM_SERVO_BITS = 16;
-static const int PWM_MOTOR_BITS = 8;
-static const int PWM_SERVO_FREQ = 50;
-static const int PWM_MOTOR_FREQ = 5000;
-
-static const int SERVO_CENTER_US = 1500;
-
-enum ObstacleColor {
-  NO_OBSTACLE,
-  RED_OBSTACLE,
-  GREEN_OBSTACLE,
-  UNKNOWN_OBSTACLE
+enum TrafficSignColor {
+  NO_SIGN,
+  RED_SIGN,
+  GREEN_SIGN,
+  UNKNOWN_SIGN
 };
 
 enum RobotState {
-  WAIT_FOR_HUSKYLENS_TESTS,
+  WAIT_FOR_SENSOR_SELECTION,
   FOLLOW_LANE,
-  READ_HUSKYLENS,
+  READ_TRAFFIC_SIGN,
   EVADE_RED,
   EVADE_GREEN,
   RECOVER_LANE,
@@ -59,13 +29,9 @@ enum RobotState {
   FINISHED
 };
 
-static RobotState state = WAIT_FOR_HUSKYLENS_TESTS;
+RobotState state = WAIT_FOR_SENSOR_SELECTION;
 
-static void pwmAttachCompat(int pin, int channel, int freq, int bits);
-static void pwmWriteCompat(int pin, int channel, int duty);
-static void writeServoPulse(int microseconds);
-static void stopMotor();
-ObstacleColor detectObstacleColor();
+TrafficSignColor detectTrafficSignColor();
 void classifyAndTransition();
 void followLane();
 void handleRedObstacle();
@@ -73,63 +39,25 @@ void handleGreenObstacle();
 void recoverLane();
 void searchParkingBox();
 void performParkingManeuver();
-
-static void pwmAttachCompat(int pin, int channel, int freq, int bits) {
-#if ESP_ARDUINO_VERSION_MAJOR >= 3
-  (void)channel;
-  ledcAttach(pin, freq, bits);
-#else
-  ledcSetup(channel, freq, bits);
-  ledcAttachPin(pin, channel);
-#endif
-}
-
-static void pwmWriteCompat(int pin, int channel, int duty) {
-#if ESP_ARDUINO_VERSION_MAJOR >= 3
-  (void)channel;
-  ledcWrite(pin, duty);
-#else
-  ledcWrite(channel, duty);
-#endif
-}
-
-static void writeServoPulse(int microseconds) {
-  int duty = (int)((uint32_t)microseconds * ((1UL << PWM_SERVO_BITS) - 1) / 20000UL);
-  pwmWriteCompat(PIN_SERVO, PWM_SERVO_CH, duty);
-}
-
-static void stopMotor() {
-  digitalWrite(PIN_MOTOR_IN1, LOW);
-  digitalWrite(PIN_MOTOR_IN2, LOW);
-  pwmWriteCompat(PIN_MOTOR_ENA, PWM_MOTOR_CH, 0);
-}
+void stopRobot();
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+  stopRobot();
 
-  pinMode(PIN_MOTOR_IN1, OUTPUT);
-  pinMode(PIN_MOTOR_IN2, OUTPUT);
-
-  pwmAttachCompat(PIN_SERVO, PWM_SERVO_CH, PWM_SERVO_FREQ, PWM_SERVO_BITS);
-  pwmAttachCompat(PIN_MOTOR_ENA, PWM_MOTOR_CH, PWM_MOTOR_FREQ, PWM_MOTOR_BITS);
-
-  writeServoPulse(SERVO_CENTER_US);
-  stopMotor();
-
-  Serial.println("Obstacle Challenge placeholder loaded.");
-  Serial.println("HuskyLens integration, obstacle color IDs, and parking logic are still TODO.");
+  Serial.println("Obstacle Challenge placeholder loaded for Arduino Mega.");
+  Serial.println("Select and test a color/vision sensor before implementing obstacle behavior.");
 }
 
 void loop() {
   switch (state) {
-    case WAIT_FOR_HUSKYLENS_TESTS:
-      stopMotor();
+    case WAIT_FOR_SENSOR_SELECTION:
+      stopRobot();
       break;
     case FOLLOW_LANE:
       followLane();
       break;
-    case READ_HUSKYLENS:
+    case READ_TRAFFIC_SIGN:
       classifyAndTransition();
       break;
     case EVADE_RED:
@@ -148,22 +76,22 @@ void loop() {
       performParkingManeuver();
       break;
     case FINISHED:
-      stopMotor();
+      stopRobot();
       break;
   }
 }
 
-ObstacleColor detectObstacleColor() {
-  // TODO: Implement after HuskyLens communication mode and color IDs are tested.
-  return NO_OBSTACLE;
+TrafficSignColor detectTrafficSignColor() {
+  // TODO: Implement after the team selects and tests color/vision hardware.
+  return NO_SIGN;
 }
 
 void classifyAndTransition() {
-  ObstacleColor color = detectObstacleColor();
+  TrafficSignColor color = detectTrafficSignColor();
 
-  if (color == RED_OBSTACLE) {
+  if (color == RED_SIGN) {
     state = EVADE_RED;
-  } else if (color == GREEN_OBSTACLE) {
+  } else if (color == GREEN_SIGN) {
     state = EVADE_GREEN;
   } else {
     state = FOLLOW_LANE;
@@ -171,16 +99,16 @@ void classifyAndTransition() {
 }
 
 void followLane() {
-  // TODO: Reuse Open Challenge wall following and add obstacle look-ahead.
+  // TODO: Reuse the Open Challenge lane-following baseline.
 }
 
 void handleRedObstacle() {
-  // TODO: Add red obstacle steering path after HuskyLens detection is calibrated.
+  // TODO: Add red sign evasion path after detection is calibrated.
   state = RECOVER_LANE;
 }
 
 void handleGreenObstacle() {
-  // TODO: Add green obstacle steering path after HuskyLens detection is calibrated.
+  // TODO: Add green sign evasion path after detection is calibrated.
   state = RECOVER_LANE;
 }
 
@@ -190,11 +118,15 @@ void recoverLane() {
 }
 
 void searchParkingBox() {
-  // TODO: Decide whether parking detection uses HuskyLens, geometry, or encoder timing.
+  // TODO: Decide whether parking detection uses color sensing, geometry, or timing.
   state = PARKING_MANEUVER;
 }
 
 void performParkingManeuver() {
   // TODO: Add parking motion after the detection method is selected.
   state = FINISHED;
+}
+
+void stopRobot() {
+  // TODO: Connect this to the final motor/servo output helpers after obstacle code is implemented.
 }

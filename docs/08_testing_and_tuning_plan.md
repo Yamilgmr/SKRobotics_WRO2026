@@ -21,17 +21,17 @@ Every important change should produce evidence. The team should avoid changing m
 
 | ID | Test | Pass Condition |
 | --- | --- | --- |
-| T01 | Servo center test | Robot rolls straight with center value |
-| T02 | Servo limit test | No mechanical binding at left/right limits |
-| T03 | Ultrasonic static test | Readings within acceptable error at fixed distances |
-| T04 | Level converter voltage test | ESP32-side echo signals stay near 3.3 V |
-| T05 | MPU6050 yaw test | Yaw changes consistently during manual 90 degree turns |
-| T06 | Motor driver low PWM test | Motor starts smoothly without overheating driver |
-| T07 | Wall following test | Robot follows one straight section without oscillation |
+| T01 | Arduino Mega pin verification | Every pin in the table controls or reads the expected device |
+| T02 | Servo center test | Robot rolls straight with center value |
+| T03 | Servo limit test | No mechanical binding at left/right limits |
+| T04 | Ultrasonic static test | Front and right readings are within acceptable error at fixed distances |
+| T05 | Gyroscope yaw test | Yaw changes consistently during manual 90 degree turns |
+| T06 | L298N low PWM test | Motor starts smoothly without overheating driver |
+| T07 | Right-wall following test | Robot follows one straight section without oscillation |
 | T08 | Prefire corner test | Robot turns without stopping and avoids front wall |
 | T09 | One lap test | Robot completes one lap |
 | T10 | Three lap test | Robot completes three laps and stops |
-| T11 | Obstacle color test | HuskyLens identifies red/green reliably after integration |
+| T11 | Obstacle color sensor test | Future sensor identifies red/green reliably after selection |
 
 ## Metrics
 
@@ -40,7 +40,6 @@ Every important change should produce evidence. The team should avoid changing m
 - Wall touches per run.
 - Turn count accuracy.
 - Ultrasonic invalid reading percentage.
-- MPU6050 yaw drift after each lap.
-- ESP32-side echo voltage after level conversion.
+- Gyroscope yaw drift after each lap.
 - Battery voltage before and after run.
-
+- L298N heat observations after repeated runs.
