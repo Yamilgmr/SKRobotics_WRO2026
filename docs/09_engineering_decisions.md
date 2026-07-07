@@ -7,8 +7,8 @@ This document records current design reasoning. More detailed entries are stored
 Reason:
 
 - The team had urgent practical constraints and needed a controller that could be wired and tested immediately.
-- Arduino Mega 2560 provides many 5 V digital pins for sensors, servo signal, L298N control, and I2C gyroscope communication.
-- It is compatible with the current two-ultrasonic, MG996R, L298N, and gyroscope baseline.
+- Arduino Mega 2560 provides many 5 V digital pins for sensors, servo signal, and L298N control.
+- It is compatible with the current two-ultrasonic, MG996R, and L298N baseline.
 
 Trade-off:
 
@@ -28,7 +28,7 @@ Trade-off:
 
 - No left-side distance measurement.
 - Recovery after corners is harder.
-- The robot depends more on gyroscope yaw and careful timing.
+- The robot depends more on ultrasonic thresholds and careful timing.
 
 ## Decision: Use L298N For The First Motor-Control Prototype
 

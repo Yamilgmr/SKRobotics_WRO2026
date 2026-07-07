@@ -2,7 +2,9 @@
 
 ## Overview
 
-The software is written for Arduino Mega 2560 using Arduino C++. The current implementation focuses on the urgent hardware baseline: front ultrasonic sensor, right ultrasonic sensor, MG996R steering servo, gyroscope/IMU, start button, and L298N motor driver.
+The software is written for Arduino Mega 2560 using Arduino C++. The current implementation focuses on the final two-sensor baseline: front ultrasonic sensor, right ultrasonic sensor, MG996R steering servo, and L298N motor driver.
+
+The code does not use a start button, status LED, encoder, left ultrasonic sensor, or gyroscope.
 
 The core design is a finite state machine. This makes the robot easier to test because each behavior has a clear entry condition, exit condition, and set of tuning constants.
 
@@ -10,14 +12,13 @@ The core design is a finite state machine. This makes the robot easier to test b
 
 ```mermaid
 stateDiagram-v2
-    [*] --> WAITING_FOR_START
-    WAITING_FOR_START --> DRIVING: button pressed
-    DRIVING --> TURNING: front distance below threshold
-    TURNING --> REALIGNING: yaw or timer exit
-    REALIGNING --> DRIVING: recovery timer elapsed
-    REALIGNING --> FINISH_DRIVE: target corners counted
-    FINISH_DRIVE --> STOPPED: final drive timer elapsed
-    STOPPED --> [*]
+    [*] --> STRAIGHT
+    STRAIGHT --> TURNING_RIGHT: right side free
+    STRAIGHT --> TURNING_RIGHT: front blocked and right side free
+    STRAIGHT --> TURNING_LEFT: front blocked and right side not free
+    TURNING_RIGHT --> POST_TURN_STRAIGHT: timed/sensor exit
+    TURNING_LEFT --> POST_TURN_STRAIGHT: timed/sensor exit
+    POST_TURN_STRAIGHT --> STRAIGHT: post-turn timer elapsed
 ```
 
 ## Main Modules
@@ -25,32 +26,34 @@ stateDiagram-v2
 | Module | Responsibility |
 | --- | --- |
 | Sensor reading | Reads front and right ultrasonic sensors with filtering |
-| Right-wall following | Converts right distance error into steering correction |
-| Turn prefire | Starts corner steering before collision risk |
-| Gyroscope update | Reads yaw rate to estimate turn progress |
+| Right-wall following | Applies simple steering correction from right distance |
+| Turn decision | Chooses left or right turn only while in `STRAIGHT` |
+| Turn hold | Holds the chosen turn until the exit condition |
 | Motor output | Sends PWM and direction commands to the L298N motor driver |
-| State management | Controls transitions and turn counting |
+| Servo output | Commands MG996R steering angle |
 | Debug output | Prints values for tuning through Serial Monitor |
 
 ## Important Constants
 
-- `TARGET_RIGHT_DISTANCE_CM`: target distance from the right wall.
-- `FRONT_TURN_CM`: front distance that triggers a prefire turn.
-- `FRONT_DANGER_CM`: emergency front distance.
-- `TURN_DIRECTION`: default turn direction for the current track setup.
-- `TURN_EXIT_YAW_DEG`: yaw change used to validate turn exit if the gyroscope is available.
+- `RIGHT_TARGET_CM`: target distance from the right wall.
+- `RIGHT_FREE_CM`: right-side distance interpreted as open space.
+- `RIGHT_TOO_CLOSE_CM`: right-side distance that triggers steering away from the wall.
+- `FRONT_TURN_CM`: front distance that triggers a turn decision.
+- `FRONT_CLEAR_AFTER_TURN_CM`: front distance used as turn-exit evidence.
 - `MIN_TURN_MS` and `MAX_TURN_MS`: turn timing limits.
-- `SERVO_CENTER`, `SERVO_LEFT_LIMIT`, and `SERVO_RIGHT_LIMIT`: steering command limits.
+- `POST_TURN_STRAIGHT_MS`: time to drive straight before allowing another decision.
+- `SERVO_LEFT`, `SERVO_CENTER`, and `SERVO_RIGHT`: steering command limits.
 
 ## Known Edge Cases
 
-- Front sensor returns zero because no echo was received.
-- Right sensor reads the wrong surface during a corner.
+- Front sensor returns maximum distance because no echo was received.
+- Right sensor sees open space and triggers a right turn too early.
 - Robot starts angled relative to the wall.
 - Battery voltage changes motor speed and turn radius.
 - Servo mechanical limits differ from code constants.
 - The L298N direction may be inverted.
-- Gyroscope yaw can drift and must be calibrated on startup.
+- The current code does not count laps or stop after three laps yet.
+- `MIN_TURN_MS` is currently greater than `MAX_TURN_MS` in the final code, so the max-time exit dominates turn duration until the team retunes those constants.
 
 ## Build Instructions
 
@@ -61,4 +64,4 @@ stateDiagram-v2
 5. Verify pin constants match the real wiring.
 6. Keep the robot lifted during first motor and servo tests.
 7. Compile and upload.
-8. Use Serial Monitor at 115200 baud for debug values.
+8. Use Serial Monitor at 9600 baud for debug values.

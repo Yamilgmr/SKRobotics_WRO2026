@@ -32,7 +32,6 @@ The current prototype uses the following parts:
 | --- | --- | --- | --- |
 | Main controller | Arduino Mega 2560 | Reads sensors, controls actuators, and runs the state machine | Selected |
 | Distance sensing | 2 HC-SR04 ultrasonic sensors | Front distance and right-wall distance | Selected |
-| Orientation sensing | Gyroscope / IMU, model to confirm | Yaw estimate for turn validation | Selected |
 | Steering | MG996R servo | Front axle steering | Selected |
 | Propulsion | DC motor | Drive motor | Selected |
 | Motor driver | L298N | DC motor direction and PWM speed control | Selected |
@@ -41,23 +40,20 @@ The current prototype uses the following parts:
 
 Important safety note: a DC motor must not be powered directly from Arduino pins. The L298N is required between the Arduino Mega and the DC motor. All electronics must share common ground, and the MG996R servo should not be powered from a weak Arduino 5 V pin if it draws high current under steering load.
 
-## Draft Pin Map
+## Current Pin Map
 
-The team changed hardware quickly, so this pin map is a clean draft for the current Arduino Mega baseline. It must be compared with the real wiring before upload. If any cable is already connected differently, update the constants in the code and this table together.
+This pin map comes from the final Arduino Mega code currently used by the team. If any cable is connected differently on the physical robot, update the constants in the code and this table together.
 
 | Component | Arduino Mega Pin | Notes |
 | --- | --- | --- |
-| MG996R steering servo signal | D6 | Servo PWM signal |
+| MG996R steering servo signal | D9 | Servo PWM signal |
 | L298N ENA | D5 | Motor speed PWM |
-| L298N IN1 | D4 | Motor direction |
-| L298N IN2 | D3 | Motor direction |
+| L298N IN1 | D6 | Motor direction |
+| L298N IN2 | D7 | Motor direction |
 | Front HC-SR04 TRIG | D22 | Front ultrasonic trigger |
 | Front HC-SR04 ECHO | D23 | Front ultrasonic echo |
 | Right HC-SR04 TRIG | D24 | Right ultrasonic trigger |
 | Right HC-SR04 ECHO | D25 | Right ultrasonic echo |
-| Gyroscope SDA | D20 / SDA | Arduino Mega I2C data |
-| Gyroscope SCL | D21 / SCL | Arduino Mega I2C clock |
-| Start button | D30 | Uses internal pull-up |
 
 ## Technical Direction
 
@@ -65,13 +61,13 @@ For the Open Challenge, the current strategy is right-wall following with predic
 
 The planned behavior is:
 
-1. Wait for the start button.
+1. Start driving after power-on and sensor warmup.
 2. Drive forward while reading the front and right ultrasonic sensors.
 3. Use the right ultrasonic sensor to correct steering during straight sections.
-4. Start a continuous turn when the front ultrasonic sensor detects an upcoming corner.
-5. Use the gyroscope and timing limits to decide when the turn is complete.
-6. Recenter the steering after each turn.
-7. Count corners until three laps are estimated, then stop.
+4. Turn right when the right side is free.
+5. Turn left when the front is blocked and the right side is not free.
+6. Hold each turn until the timed/sensor exit condition is reached.
+7. Drive straight briefly after each turn before allowing another turn decision.
 
 This is a practical first approach for the hardware currently available. It is weaker than a full sensor suite because the robot no longer has a left ultrasonic sensor or a color/vision sensor. The repository documents that limitation honestly so the next engineering decisions are clear.
 
@@ -80,7 +76,8 @@ This is a practical first approach for the hardware currently available. It is w
 - Only two ultrasonic sensors are installed: front and right.
 - There is no current camera or color sensor for Obstacle Challenge red/green recognition.
 - Parking strategy is not selected yet.
-- The exact gyroscope model and calibration constants must be confirmed.
+- No gyroscope, encoder, start button, or status LED is used in the current code.
+- Lap counting and automatic final stop after three laps are not implemented yet.
 - The final wiring diagram and real pin verification are still pending.
 - Battery behavior at 7.4 V nominal must be measured under motor load.
 
@@ -128,14 +125,12 @@ This repository follows the public WRO Future Engineers template structure and e
 
 The starter firmware is designed around a finite state machine. That makes the robot behavior easier to explain, test, and improve. The Open Challenge sketch separates these responsibilities:
 
-- `WAITING_FOR_START`: keep the robot still until the start button is pressed.
-- `DRIVING`: follow the right wall and monitor front distance.
-- `TURNING`: steer through the corner without stopping.
-- `REALIGNING`: center the steering and stabilize after the corner.
-- `FINISH_DRIVE`: move a short final distance after the target corner count.
-- `STOPPED`: stop the motor and hold the steering centered.
+- `STRAIGHT`: follow the right wall and decide whether a left or right turn is needed.
+- `TURNING_LEFT`: hold a left turn until the turn exit condition.
+- `TURNING_RIGHT`: hold a right turn until the turn exit condition.
+- `POST_TURN_STRAIGHT`: drive straight briefly after a turn before allowing new decisions.
 
-The first version avoids depending on unfinished calibration data. It uses the Arduino Mega, two ultrasonic sensors, the MG996R steering servo, the L298N motor driver, and gyroscope yaw feedback when available. Constants are grouped at the top of the sketch so testing can be done methodically.
+The first version avoids depending on unfinished calibration data. It uses the Arduino Mega, two ultrasonic sensors, the MG996R steering servo, and the L298N motor driver. Constants are grouped at the top of the sketch so testing can be done methodically.
 
 ## Motor Driver Status
 
@@ -157,9 +152,9 @@ The Open Challenge rewards completing three laps and stopping correctly. Our fir
 1. Verify the Arduino Mega pin map.
 2. Build a repeatable right-wall-following baseline.
 3. Tune the front distance threshold for early corner entry.
-4. Tune turn timing and gyroscope threshold so the robot exits corners consistently.
+4. Tune turn timing and sensor thresholds so the robot exits corners consistently.
 5. Reduce oscillation by limiting steering correction.
-6. Count turns and stop after the target corner count.
+6. Add turn counting and final stop after the movement baseline is reliable.
 
 The team goal is to make the robot complete laps reliably before increasing speed. Once reliability is stable, the prefire turn can be made more aggressive to reduce lap time.
 
@@ -197,9 +192,9 @@ Priority tests:
 - Ultrasonic sensor stability at 10 cm, 20 cm, 30 cm, 40 cm, and 60 cm.
 - Servo center and maximum safe left/right angles.
 - Motor PWM response with the L298N.
-- Gyroscope yaw stability and turn-exit repeatability.
 - Corner prefire threshold test.
 - Three lap consistency test.
+- Turn counting and final stop test after that feature is added.
 - Future obstacle color detection test after the sensor is selected.
 
 ## Reproducibility Checklist
@@ -220,7 +215,7 @@ Priority tests:
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.
 - [ ] L298N wiring and PWM test data.
-- [ ] Gyroscope calibration data.
+- [ ] Turn counting and automatic final stop.
 - [ ] Obstacle color detection hardware and strategy.
 - [ ] Parking strategy.
 - [ ] Final competition code.

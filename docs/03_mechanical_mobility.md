@@ -23,8 +23,8 @@ The starter code uses these default values:
 
 ```cpp
 static const int SERVO_CENTER = 90;
-static const int SERVO_LEFT_LIMIT = 55;
-static const int SERVO_RIGHT_LIMIT = 125;
+static const int SERVO_LEFT = 25;
+static const int SERVO_RIGHT = 130;
 ```
 
 These values match the current base firmware convention. They still need physical validation with the wheels lifted, because the safest software limits depend on the final servo horn and steering linkage geometry.
@@ -47,15 +47,16 @@ The team wants the robot to turn without stopping. The current prefire method st
 
 Variables to tune:
 
-- `FRONT_DANGER_CM`
 - `FRONT_TURN_CM`
-- `TARGET_RIGHT_DISTANCE_CM`
-- `RIGHT_CORRECTION_GAIN`
+- `FRONT_CLEAR_AFTER_TURN_CM`
+- `RIGHT_TARGET_CM`
+- `RIGHT_FREE_CM`
+- `RIGHT_TOO_CLOSE_CM`
 - `MIN_TURN_MS`
 - `MAX_TURN_MS`
-- `TURN_EXIT_YAW_DEG`
-- `SERVO_LEFT_LIMIT`
-- `SERVO_RIGHT_LIMIT`
+- `POST_TURN_STRAIGHT_MS`
+- `SERVO_LEFT`
+- `SERVO_RIGHT`
 
 ## Mechanical Evidence To Add
 

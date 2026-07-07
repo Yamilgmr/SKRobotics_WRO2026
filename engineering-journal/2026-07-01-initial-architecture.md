@@ -4,9 +4,11 @@
 
 The team is preparing for WRO 2026 Future Engineers. At this point in the design process, the first documented robot hardware included an Arduino Mega 2560, three ultrasonic sensors, an AD002 steering servo, a DC motor, and a 3 x 3.7 V battery holder. The L298N motor driver had been removed, so motor control was treated as an unresolved subsystem.
 
-Update on 2026-07-04: the current confirmed control architecture is now an ESP32 Acebott / ESP32 Dev Module with an MG996R steering servo, MPU6050 IMU, three HC-SR04 ultrasonic sensors, L298N motor driver, and 8-channel bidirectional level converter. The earlier Arduino Mega notes remain as project history, but the active pin map and firmware now target ESP32.
+Update on 2026-07-04: the team temporarily tested an ESP32 Acebott / ESP32 Dev Module architecture with an MG996R steering servo, MPU6050 IMU, three HC-SR04 ultrasonic sensors, L298N motor driver, and 8-channel bidirectional level converter. This remains as project history because the active 2026-07-06 build returned to Arduino Mega.
 
-Update on 2026-07-05: due to urgent practical constraints, the active control architecture returned to Arduino Mega 2560. The current component list is Arduino Mega 2560, L298N motor driver, two ultrasonic sensors mounted front and right, MG996R steering servo, gyroscope/IMU, breadboard, two 3.7 V cells for 7.4 V nominal, and one DC motor. The ESP32 wiring is now treated as an archived iteration, not the active baseline.
+Update on 2026-07-05: due to urgent practical constraints, the active control architecture returned to Arduino Mega 2560. The current component list is Arduino Mega 2560, L298N motor driver, two ultrasonic sensors mounted front and right, MG996R steering servo, breadboard, two 3.7 V cells for 7.4 V nominal, and one DC motor. The ESP32 wiring is now treated as an archived iteration, not the active baseline.
+
+Update on 2026-07-06: the final current Open Challenge code no longer uses a gyroscope, start button, status LED, encoder, or left ultrasonic sensor. The active pin map is servo D9, L298N ENA D5, IN1 D6, IN2 D7, front ultrasonic D22/D23, and right ultrasonic D24/D25.
 
 ## Design Direction
 

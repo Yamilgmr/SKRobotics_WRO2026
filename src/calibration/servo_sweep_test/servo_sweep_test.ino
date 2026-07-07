@@ -6,11 +6,11 @@
   Keep the wheels lifted and stop immediately if the linkage binds.
 */
 
-static const uint8_t PIN_SERVO = 6;
+static const uint8_t PIN_SERVO = 9;
 
 static const int SERVO_CENTER = 90;
-static const int SERVO_LEFT_LIMIT = 55;
-static const int SERVO_RIGHT_LIMIT = 125;
+static const int SERVO_LEFT_LIMIT = 25;
+static const int SERVO_RIGHT_LIMIT = 130;
 
 Servo steeringServo;
 

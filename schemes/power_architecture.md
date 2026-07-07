@@ -14,7 +14,6 @@ The robot uses two 3.7 V cells for a 7.4 V nominal battery pack. The exact chemi
 | L298N motor driver | Battery input, 5 V logic input | TBD | Measure heat and voltage drop during tests |
 | Front HC-SR04 | 5 V | TBD | Datasheet |
 | Right HC-SR04 | 5 V | TBD | Datasheet |
-| Gyroscope / IMU | TBD | TBD | Confirm exact module |
 
 ## Motor Driver Decision
 

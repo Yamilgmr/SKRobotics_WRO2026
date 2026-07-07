@@ -6,15 +6,17 @@ The first engineering goal is reliability. A slow robot that completes laps give
 
 ## Current Prototype
 
-The current prototype is based on an Arduino Mega 2560, two HC-SR04 ultrasonic sensors, an MG996R steering servo, a gyroscope/IMU, an L298N motor driver, a DC motor, a breadboard, and two 3.7 V cells wired for 7.4 V nominal.
+The current prototype is based on an Arduino Mega 2560, two HC-SR04 ultrasonic sensors, an MG996R steering servo, an L298N motor driver, a DC motor, a breadboard, and two 3.7 V cells wired for 7.4 V nominal.
+
+The current code does not use a left ultrasonic sensor, gyroscope, encoder, start button, or status LED.
 
 ## Development Strategy
 
 The project is split into four stages:
 
-1. Verify safe wiring with the Arduino Mega, L298N, servo, sensors, and battery pack.
-2. Tune right-wall following and continuous corner prefire for the Open Challenge.
-3. Use gyroscope yaw feedback to improve turn repeatability.
+1. Verify safe wiring with the Arduino Mega, L298N, servo, ultrasonic sensors, and battery pack.
+2. Tune right-wall following and continuous left/right turns for the Open Challenge.
+3. Add lap counting and automatic stop after the movement baseline is reliable.
 4. Choose a color or vision sensor for Obstacle Challenge decisions.
 
 ## High-Level System Diagram
@@ -28,20 +30,20 @@ flowchart TD
     C --> F["MG996R steering servo signal"]
     C --> G["Front ultrasonic sensor"]
     C --> H["Right ultrasonic sensor"]
-    C --> I["Gyroscope / IMU over I2C"]
-    C --> J["Start button"]
     C --> D
 ```
 
 ## Main Performance Hypothesis
 
-Our Open Challenge hypothesis is that the robot can complete laps faster if it starts steering before the front wall is too close. This prefire turning approach avoids a full stop-and-turn sequence. The risk is that turning too early causes the robot to cut into the inner wall or miss the next lane. The tuning process will compare different front distance thresholds, steering angles, turn timing, and gyroscope exit thresholds.
+Our Open Challenge hypothesis is that the robot can complete laps faster if it keeps moving through corners instead of stopping. The current code uses front and right ultrasonic distance readings to choose between right turns, left turns, and right-wall following. The risk is that timed turns can vary with battery voltage, floor grip, motor behavior, and steering geometry.
 
 ## Current Limitations
 
 - Only front and right ultrasonic sensors are installed.
 - Left-wall recovery is limited because there is no left ultrasonic sensor.
-- The gyroscope model and calibration constants must be confirmed.
+- No gyroscope or encoder is used, so turn angle and distance are not directly measured.
+- No start button is used; the current code begins after startup warmup.
+- The current code does not yet count laps or stop automatically after three laps.
 - Obstacle Challenge color recognition hardware is not selected in the current component list.
 - Parking strategy is not selected yet.
 - No final CAD or mechanical measurements yet.

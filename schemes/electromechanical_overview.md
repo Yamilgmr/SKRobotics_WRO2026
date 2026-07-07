@@ -12,14 +12,11 @@ flowchart TD
     MEGA --> SERVO["MG996R steering servo signal"]
     MEGA --> USF["Front HC-SR04 trigger/echo"]
     MEGA --> USR["Right HC-SR04 trigger/echo"]
-    MEGA --> IMU["Gyroscope / IMU I2C"]
-    MEGA --> BTN["Start button"]
     MEGA --> DRV
     DRV --> MOTOR["DC drive motor"]
     BB["Breadboard"] --> MEGA
     BB --> USF
     BB --> USR
-    BB --> IMU
 ```
 
 ## Notes

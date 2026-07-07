@@ -12,8 +12,8 @@ static const bool MOTOR_OUTPUT_ENABLED = false;
 static const bool MOTOR_INVERTED = false;
 
 static const uint8_t PIN_MOTOR_ENA = 5;
-static const uint8_t PIN_MOTOR_IN1 = 4;
-static const uint8_t PIN_MOTOR_IN2 = 3;
+static const uint8_t PIN_MOTOR_IN1 = 6;
+static const uint8_t PIN_MOTOR_IN2 = 7;
 
 void setMotor(int pwm);
 void stopMotor();
