@@ -4,8 +4,15 @@ This folder contains electromechanical diagrams, wiring plans, and power distrib
 
 Current files:
 
+- [Electrical wiring diagram](electrical_wiring_diagram.svg)
 - [Electromechanical overview](electromechanical_overview.md)
 - [Power architecture](power_architecture.md)
 
-The final repository should include at least one exported wiring diagram image or PDF. The diagram must show the Arduino Mega 2560, front and right HC-SR04 ultrasonic sensors, MG996R servo, L298N motor driver, DC motor, breadboard, 2 x 3.7 V battery pack, switch, and common ground.
+The current wiring diagram image shows the Arduino Mega 2560, front and right HC-SR04 ultrasonic sensors, MG996R servo, L298N motor driver, DC motor, breadboard, 2 x 3.7 V battery pack, switch, recommended servo regulator, and common ground.
+
+Pending:
+
+- Physical verification of every wire against the final robot.
+- Final wire colors after physical verification.
+- Photos of cleaned wiring.
 

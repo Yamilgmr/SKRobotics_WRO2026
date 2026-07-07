@@ -28,6 +28,7 @@
 - Updated the pin map to servo D9, L298N D5/D6/D7, front ultrasonic D22/D23, and right ultrasonic D24/D25.
 - Replaced the six required vehicle photos in `v-photos/` with the final current vehicle views.
 - Added formal, individual, and working-session team photos in `t-photos/`.
+- Added the current electrical wiring diagram image in `schemes/electrical_wiring_diagram.svg`.
 - Removed active documentation references to gyroscope, start button, status LED, encoder, and left ultrasonic sensor.
 - Documented that lap counting and automatic final stop are still missing from the current movement baseline.
 

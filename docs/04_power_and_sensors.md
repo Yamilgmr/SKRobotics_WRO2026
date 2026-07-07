@@ -37,6 +37,8 @@ No left ultrasonic sensor, gyroscope, encoder, start button, or status LED is us
 
 This pin map comes from the final Arduino Mega code currently stored in `src/SKRobotics_OpenChallenge/SKRobotics_OpenChallenge.ino`.
 
+The current wiring diagram image is stored at `schemes/electrical_wiring_diagram.svg`.
+
 | Component | Arduino Mega Pin | Notes |
 | --- | --- | --- |
 | MG996R steering servo signal | D9 | Servo signal |

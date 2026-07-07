@@ -78,7 +78,7 @@ This is a practical first approach for the hardware currently available. It is w
 - Parking strategy is not selected yet.
 - No gyroscope, encoder, start button, or status LED is used in the current code.
 - Lap counting and automatic final stop after three laps are not implemented yet.
-- The final wiring diagram and real pin verification are still pending.
+- The wiring diagram image is available, but physical wire-by-wire verification is still pending.
 - Battery behavior at 7.4 V nominal must be measured under motor load.
 
 ## WRO Repository Structure
@@ -209,7 +209,8 @@ Priority tests:
 - [x] Calibration sketches.
 - [x] Engineering journal templates.
 - [x] Final vehicle photos from all required angles.
-- [ ] Verified final wiring diagram.
+- [x] Electrical wiring diagram image.
+- [ ] Physical wire-by-wire verification.
 - [x] Team photo files stored directly in `t-photos/`.
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.

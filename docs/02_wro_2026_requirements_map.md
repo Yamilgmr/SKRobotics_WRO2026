@@ -12,7 +12,7 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | Vehicle photos | Six final current vehicle views are stored in `v-photos/` | Done |
 | Team photos | Formal, individual, and working-session photos are stored in `t-photos/` | Done |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |
-| Wiring and electromechanical diagrams | Markdown diagrams in `schemes/` | Started |
+| Wiring and electromechanical diagrams | SVG wiring diagram and Markdown diagrams in `schemes/` | Diagram added, physical verification pending |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
 | Engineering process evidence | Decision log and test templates | Started |
 | At least three meaningful commits | Repository history contains multiple meaningful commits | Done |
