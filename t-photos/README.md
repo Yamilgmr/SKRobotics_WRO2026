@@ -1,19 +1,28 @@
 # Team Photos
 
-Here you can visualize the team member's pictures. In this file folder, you can also find other personal, funny, and formal images.
+This folder contains the official team photos and engineering process photos for SKRobotics.
 
-# Oficial Photo
-Formal Photo of the members
+## Formal Team Photo
+
+![Formal team photo](team_group.jpg)
+
 Team members:
-<img width="2048" height="1536" alt="image" src="https://github.com/user-attachments/assets/0bb56cc9-8b4d-4895-8a97-58df659339e6" />
 
-Right: - Carlo Yau
-Left: - Yamil López
+- Left: Yamil Lopez
+- Right: Carlo Yau
 
-# Funny Photo
-This was us recreating Rush Hour after the robot didn’t behave the way we wanted: one calm engineer, one dramatic problem solver, and a robot somewhere causing chaos.
-<img width="1536" height="2048" alt="image" src="https://github.com/user-attachments/assets/01a6b425-9ddc-42e6-9a71-f3057bdfac17" />
-<img width="250" height="371" alt="image" src="https://github.com/user-attachments/assets/d9aa6406-76cc-4607-844f-413f65769959" />
+## Individual Portraits
 
-Right: - Yamil Lopez
-Left: - Carlo Yau
+### Yamil Lopez
+
+![Yamil Lopez portrait](yamil_lopez.jpg)
+
+### Carlo Yau
+
+![Carlo Yau portrait](carlo_yau.jpg)
+
+## Working Session
+
+![SKRobotics working session](working_session.jpg)
+
+Yamil Lopez and Carlo Yau working on the robot chassis, wiring, and software during development.

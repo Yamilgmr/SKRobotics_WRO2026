@@ -210,7 +210,7 @@ Priority tests:
 - [x] Engineering journal templates.
 - [x] Final vehicle photos from all required angles.
 - [ ] Verified final wiring diagram.
-- [ ] Team photo files stored directly in `t-photos/`.
+- [x] Team photo files stored directly in `t-photos/`.
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.
 - [ ] L298N wiring and PWM test data.

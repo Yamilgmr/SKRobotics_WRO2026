@@ -10,7 +10,7 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | README in English with at least 5000 characters | Main README is written in English and exceeds the minimum target | Done |
 | Source code for programmed components | Arduino Mega sketches in `src/` | Started |
 | Vehicle photos | Six final current vehicle views are stored in `v-photos/` | Done |
-| Team photos | Team photos are shown in `t-photos/README.md` | Started |
+| Team photos | Formal, individual, and working-session photos are stored in `t-photos/` | Done |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |
 | Wiring and electromechanical diagrams | Markdown diagrams in `schemes/` | Started |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
