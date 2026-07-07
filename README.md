@@ -203,14 +203,13 @@ Priority tests:
 - [x] README in English with more than 5000 characters.
 - [x] Team and season information.
 - [x] Current hardware baseline.
-- [x] Arduino Mega draft pin map.
+- [x] Arduino Mega final code pin map.
 - [x] Initial software architecture.
 - [x] Open Challenge starter code.
 - [x] Calibration sketches.
 - [x] Engineering journal templates.
-- [x] Current vehicle photos from all required angles.
+- [x] Final vehicle photos from all required angles.
 - [ ] Verified final wiring diagram.
-- [ ] Final competition vehicle photos after wiring and mounts are finished.
 - [ ] Team photo files stored directly in `t-photos/`.
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.
