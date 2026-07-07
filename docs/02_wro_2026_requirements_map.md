@@ -13,6 +13,7 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | Team photos | Formal, individual, and working-session photos are stored in `t-photos/` | Done |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |
 | Wiring and electromechanical diagrams | SVG wiring diagram and Markdown diagrams in `schemes/` | Diagram added, physical verification pending |
+| Calibration and test data | Templates exist in `data/calibration/` | Pending real measured data |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
 | Engineering process evidence | Decision log and test templates | Started |
 | At least three meaningful commits | Repository history contains multiple meaningful commits | Done |

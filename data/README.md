@@ -2,6 +2,8 @@
 
 This folder stores calibration data and test measurements.
 
+Current status: pending real measured data from the physical robot.
+
 Planned data files:
 
 - `calibration/ultrasonic_distance_samples.csv`
