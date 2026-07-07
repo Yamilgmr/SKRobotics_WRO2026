@@ -9,5 +9,5 @@
 | 2026-07-01 | Start with ultrasonic wall following | Camera-first, IMU-first | Uses existing sensors and gives a fast Open Challenge baseline | Current reduced setup has front and right ultrasonic sensors | Run static distance tests |
 | 2026-07-04 | Use L298N for the first motor-control prototype | Replace with TB6612FNG, BTS7960, ESC, or MOSFET driver | The L298N is available and easy to test with Arduino PWM, even though it is less efficient | Current prototype photos show the L298N returned to the vehicle | Document wiring, PWM tests, and heat behavior |
 | 2026-07-01 | Use prefire turns for Open Challenge | Stop-and-turn | Lower time loss if tuned well | Team strategy preference | Tune front threshold and turn time |
-| 2026-07-05 | Mark Obstacle Challenge perception as unresolved | Keep HuskyLens plan without hardware, guess with ultrasonics | Current component list does not include color/vision hardware | New hardware baseline excludes HuskyLens | Select red/green detection sensor |
+| 2026-07-06 | Select HuskyLens for Obstacle Challenge perception | RGB color sensor, PixyCam, geometry-only obstacle behavior | HuskyLens can classify red/green signs externally and send simplified data to Arduino Mega | Team confirmed HuskyLens camera plan | Mount HuskyLens, test communication, and collect red/green detection data |
 

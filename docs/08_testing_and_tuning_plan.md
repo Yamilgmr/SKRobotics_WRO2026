@@ -31,7 +31,7 @@ Every important change should produce evidence. The team should avoid changing m
 | T08 | Post-turn recovery test | Robot does not immediately chain repeated turns |
 | T09 | One lap test | Robot completes one lap |
 | T10 | Three lap movement test | Robot completes three laps; final stop still requires later code |
-| T11 | Obstacle color sensor test | Future sensor identifies red/green reliably after selection |
+| T11 | HuskyLens red/green test | HuskyLens identifies red/green reliably after integration |
 
 ## Metrics
 

@@ -69,12 +69,12 @@ The planned behavior is:
 6. Hold each turn until the timed/sensor exit condition is reached.
 7. Drive straight briefly after each turn before allowing another turn decision.
 
-This is a practical first approach for the hardware currently available. It is weaker than a full sensor suite because the robot no longer has a left ultrasonic sensor or a color/vision sensor. The repository documents that limitation honestly so the next engineering decisions are clear.
+This is a practical first approach for the hardware currently available. It is weaker than a full sensor suite because the robot no longer has a left ultrasonic sensor and the HuskyLens camera is not integrated into the active code yet. The repository documents that limitation honestly so the next engineering decisions are clear.
 
 ## Current Limitations
 
 - Only two ultrasonic sensors are installed: front and right.
-- There is no current camera or color sensor for Obstacle Challenge red/green recognition.
+- HuskyLens is selected for Obstacle Challenge red/green recognition, but it is not integrated or calibrated yet.
 - Parking strategy is not selected yet.
 - No gyroscope, encoder, start button, or status LED is used in the current code.
 - Lap counting and automatic final stop after three laps are not implemented yet.
@@ -160,17 +160,17 @@ The team goal is to make the robot complete laps reliably before increasing spee
 
 ## Obstacle Challenge Scoring Focus
 
-The current hardware does not include a camera or color sensor, so the Obstacle Challenge strategy is not complete yet. The robot needs a reliable way to identify red and green traffic signs before it can make correct evasion decisions. Parking is also still an open design problem.
+HuskyLens is selected as the camera for Obstacle Challenge red/green recognition, but it is not integrated into the current Arduino Mega code yet. The robot needs reliable HuskyLens communication, mounting, and calibration before it can make correct evasion decisions. Parking is also still an open design problem.
 
 Recommended next steps:
 
 1. Stabilize Open Challenge movement first.
-2. Decide what sensor will identify red and green objects.
-3. Add a test sketch for the selected color/vision sensor.
+2. Mount the HuskyLens where it can see traffic signs before the car reaches them.
+3. Add a test sketch for HuskyLens red/green recognition.
 4. Add obstacle states to the finite state machine.
 5. Choose and document a parking detection method for the magenta parking box.
 
-This prevents the team from pretending a missing capability exists. Judges usually reward honest engineering reasoning more than undocumented claims.
+This prevents the team from pretending an untested capability exists. Judges usually reward honest engineering reasoning more than undocumented claims.
 
 ## Testing Evidence Plan
 
@@ -195,7 +195,7 @@ Priority tests:
 - Corner prefire threshold test.
 - Three lap consistency test.
 - Turn counting and final stop test after that feature is added.
-- Future obstacle color detection test after the sensor is selected.
+- Future HuskyLens red/green detection test after camera integration.
 
 ## Reproducibility Checklist
 
@@ -216,9 +216,11 @@ Priority tests:
 - [ ] CAD or mechanical drawings.
 - [ ] L298N wiring and PWM test data.
 - [ ] Turn counting and automatic final stop.
-- [ ] Obstacle color detection hardware and strategy.
+- [x] Obstacle color detection hardware selected: HuskyLens.
+- [ ] HuskyLens integration and red/green test data.
 - [ ] Parking strategy.
-- [ ] Final competition code.
+- [x] Current Open Challenge code marked as final for now.
+- [ ] Obstacle and parking competition code.
 
 ## Attribution
 

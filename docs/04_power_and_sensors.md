@@ -68,6 +68,6 @@ The front ultrasonic sensor supports early wall detection. The right ultrasonic 
 5. Repeat after final sensor mounting, because angle and height affect readings.
 6. Test `FRONT_TURN_CM`, `RIGHT_FREE_CM`, `RIGHT_TARGET_CM`, and turn timing on the real track.
 
-## Missing Obstacle Sensor
+## Obstacle Sensor
 
-The current component list does not include a camera or color sensor. Before the Obstacle Challenge can be solved, the team must choose how the robot will identify red and green traffic signs.
+HuskyLens is selected as the planned camera for red/green traffic sign detection. It still needs mounting, power verification, Arduino Mega communication testing, and detection calibration before it can be treated as working Obstacle Challenge hardware.

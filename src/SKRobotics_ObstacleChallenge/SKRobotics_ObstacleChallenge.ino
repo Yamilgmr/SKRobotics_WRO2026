@@ -4,10 +4,10 @@
   Target controller: Arduino Mega 2560
 
   Current status:
-  - The current hardware list does not include a camera or color sensor.
-  - Red/green traffic-sign detection cannot be implemented reliably yet.
+  - HuskyLens is selected as the planned camera for red/green sign detection.
+  - HuskyLens communication, mounting, and calibration are not implemented yet.
   - This sketch documents the future state structure without pretending the
-    missing perception hardware exists.
+    obstacle and parking behavior has already been tested.
 */
 
 enum TrafficSignColor {
@@ -18,7 +18,7 @@ enum TrafficSignColor {
 };
 
 enum RobotState {
-  WAIT_FOR_SENSOR_SELECTION,
+  WAIT_FOR_HUSKYLENS_INTEGRATION,
   FOLLOW_LANE,
   READ_TRAFFIC_SIGN,
   EVADE_RED,
@@ -29,9 +29,9 @@ enum RobotState {
   FINISHED
 };
 
-RobotState state = WAIT_FOR_SENSOR_SELECTION;
+RobotState state = WAIT_FOR_HUSKYLENS_INTEGRATION;
 
-TrafficSignColor detectTrafficSignColor();
+TrafficSignColor readHuskyLensColor();
 void classifyAndTransition();
 void followLane();
 void handleRedObstacle();
@@ -46,12 +46,12 @@ void setup() {
   stopRobot();
 
   Serial.println("Obstacle Challenge placeholder loaded for Arduino Mega.");
-  Serial.println("Select and test a color/vision sensor before implementing obstacle behavior.");
+  Serial.println("HuskyLens selected. Integrate communication and calibration before driving obstacles.");
 }
 
 void loop() {
   switch (state) {
-    case WAIT_FOR_SENSOR_SELECTION:
+    case WAIT_FOR_HUSKYLENS_INTEGRATION:
       stopRobot();
       break;
     case FOLLOW_LANE:
@@ -81,13 +81,13 @@ void loop() {
   }
 }
 
-TrafficSignColor detectTrafficSignColor() {
-  // TODO: Implement after the team selects and tests color/vision hardware.
+TrafficSignColor readHuskyLensColor() {
+  // TODO: Implement after HuskyLens mounting, communication, and color recognition are tested.
   return NO_SIGN;
 }
 
 void classifyAndTransition() {
-  TrafficSignColor color = detectTrafficSignColor();
+  TrafficSignColor color = readHuskyLensColor();
 
   if (color == RED_SIGN) {
     state = EVADE_RED;
@@ -118,7 +118,7 @@ void recoverLane() {
 }
 
 void searchParkingBox() {
-  // TODO: Decide whether parking detection uses color sensing, geometry, or timing.
+  // TODO: Decide whether parking detection uses HuskyLens, distance geometry, timing, or a combined method.
   state = PARKING_MANEUVER;
 }
 

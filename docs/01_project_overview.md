@@ -6,7 +6,7 @@ The first engineering goal is reliability. A slow robot that completes laps give
 
 ## Current Prototype
 
-The current prototype is based on an Arduino Mega 2560, two HC-SR04 ultrasonic sensors, an MG996R steering servo, an L298N motor driver, a DC motor, a breadboard, and two 3.7 V cells wired for 7.4 V nominal.
+The current prototype is based on an Arduino Mega 2560, two HC-SR04 ultrasonic sensors, an MG996R steering servo, an L298N motor driver, a DC motor, a breadboard, and two 3.7 V cells wired for 7.4 V nominal. HuskyLens is selected as the planned camera for Obstacle Challenge red/green recognition, but it is not integrated into the active code yet.
 
 The current code does not use a left ultrasonic sensor, gyroscope, encoder, start button, or status LED.
 
@@ -17,7 +17,7 @@ The project is split into four stages:
 1. Verify safe wiring with the Arduino Mega, L298N, servo, ultrasonic sensors, and battery pack.
 2. Tune right-wall following and continuous left/right turns for the Open Challenge.
 3. Add lap counting and automatic stop after the movement baseline is reliable.
-4. Choose a color or vision sensor for Obstacle Challenge decisions.
+4. Integrate and test HuskyLens for Obstacle Challenge decisions.
 
 ## High-Level System Diagram
 
@@ -30,6 +30,7 @@ flowchart TD
     C --> F["MG996R steering servo signal"]
     C --> G["Front ultrasonic sensor"]
     C --> H["Right ultrasonic sensor"]
+    C -. planned .-> I["HuskyLens camera"]
     C --> D
 ```
 
@@ -44,7 +45,7 @@ Our Open Challenge hypothesis is that the robot can complete laps faster if it k
 - No gyroscope or encoder is used, so turn angle and distance are not directly measured.
 - No start button is used; the current code begins after startup warmup.
 - The current code does not yet count laps or stop automatically after three laps.
-- Obstacle Challenge color recognition hardware is not selected in the current component list.
+- HuskyLens obstacle recognition is selected but not integrated or calibrated yet.
 - Parking strategy is not selected yet.
 - No final CAD or mechanical measurements yet.
 

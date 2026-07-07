@@ -13,8 +13,8 @@ Reason:
 Trade-off:
 
 - The ESP32 pin map and level-converter work are no longer the active baseline.
-- Arduino Mega has less processing capability for advanced vision.
-- A future color/vision sensor must be selected for the Obstacle Challenge.
+- Arduino Mega has less processing capability for advanced vision, so HuskyLens will handle the camera-side recognition.
+- HuskyLens communication and calibration still need to be integrated.
 
 ## Decision: Use Two Ultrasonic Sensors For The First Mega Baseline
 
@@ -44,15 +44,16 @@ Trade-off:
 - Voltage drop and heat may reduce the robot's speed and consistency.
 - The team must document PWM response and heat behavior to decide if it remains acceptable.
 
-## Decision: Document Missing Obstacle Perception Honestly
+## Decision: Use HuskyLens For Obstacle Perception
 
 Reason:
 
-- The current component list does not include a color or vision sensor.
+- The team selected HuskyLens as the planned red/green traffic sign camera.
+- HuskyLens can provide simplified recognition data to the Arduino Mega.
 - WRO documentation rewards engineering reasoning, testing, and reproducibility.
-- A clear risk list is more useful than pretending the robot is complete.
+- A clear risk list is more useful than pretending the camera is already integrated.
 
 Trade-off:
 
-- The repository shows incomplete items early in the season.
-- The team must choose a red/green detection method before the Obstacle Challenge can be competitive.
+- The Obstacle Challenge strategy is now selected, but not proven.
+- The team must mount the HuskyLens, test communication, and collect real red/green detection data before the Obstacle Challenge can be competitive.

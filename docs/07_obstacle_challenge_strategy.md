@@ -2,9 +2,9 @@
 
 ## Current Status
 
-The current hardware list does not include a camera, HuskyLens, PixyCam, RGB color sensor, or other color-recognition device. Because of that, the robot cannot yet identify red and green traffic signs reliably.
+The team selected a HuskyLens camera as the planned perception sensor for the Obstacle Challenge. The HuskyLens is not integrated into the active Arduino Mega code yet, so the repository treats obstacle behavior as a planned extension rather than a completed feature.
 
-This document intentionally records the gap instead of pretending the Obstacle Challenge is solved. The immediate priority is to stabilize the Open Challenge with the Arduino Mega baseline, then choose the missing perception hardware.
+Parking is not selected yet. The team will decide later whether parking uses HuskyLens color detection, distance geometry, timed movement, or a combined method.
 
 ## Rule-Based Requirement
 
@@ -12,32 +12,33 @@ The robot must pass red and green traffic signs on the correct side. It must als
 
 ## Current Hardware Assessment
 
-| Available Part | What It Can Do | What It Cannot Do |
+| Available Part | What It Can Do | Current Limitation |
 | --- | --- | --- |
-| Front ultrasonic | Detect a nearby wall or object | Identify object color |
-| Right ultrasonic | Estimate wall distance | Classify red or green signs |
-| Gyroscope | Estimate rotation during turns | Detect traffic signs or parking markers |
-| Arduino Mega | Run state machine and control actuators | Perform camera vision without an added sensor |
+| Front ultrasonic | Detect a nearby wall or object | Cannot identify object color |
+| Right ultrasonic | Estimate wall distance and right openings | Cannot classify red or green signs |
+| HuskyLens camera | Planned red/green traffic sign recognition | Needs mounting, training, communication code, and lighting tests |
+| Arduino Mega | Run state machine and control actuators | Must receive simplified color/object data from HuskyLens |
 
-## Required Future Decision
+## Selected Perception Direction
 
-The team must choose one of these directions:
+The Obstacle Challenge perception path will use HuskyLens because it can handle color/object recognition externally and send simplified information to the Arduino Mega. This is a good fit because the Mega should focus on motor, servo, and ultrasonic control instead of processing camera images directly.
 
-| Option | Benefit | Risk |
-| --- | --- | --- |
-| HuskyLens or similar AI camera | Simple color/object recognition workflow | Needs mounting, lighting tests, and communication code |
-| RGB color sensor | Lightweight and simple | May only work at short distance |
-| PixyCam or camera module | Stronger visual tracking | More setup complexity |
-| Geometry-only obstacle handling | No new sensor | Not reliable for red/green rule compliance |
+Main risks:
+
+- Lighting can change red/green recognition accuracy.
+- Camera angle and mounting height affect detection.
+- The communication interface, likely I2C or UART, still has to be confirmed and tested.
+- False positives can trigger the wrong evasion maneuver.
 
 ## Planned State Machine Extension
 
 ```mermaid
 stateDiagram-v2
     [*] --> FOLLOW_LANE
-    FOLLOW_LANE --> READ_COLOR_SENSOR: object candidate detected
-    READ_COLOR_SENSOR --> EVADE_RED: red sign
-    READ_COLOR_SENSOR --> EVADE_GREEN: green sign
+    FOLLOW_LANE --> READ_HUSKYLENS: object candidate detected
+    READ_HUSKYLENS --> EVADE_RED: red sign
+    READ_HUSKYLENS --> EVADE_GREEN: green sign
+    READ_HUSKYLENS --> FOLLOW_LANE: no valid sign
     EVADE_RED --> RECOVER_LANE
     EVADE_GREEN --> RECOVER_LANE
     RECOVER_LANE --> FOLLOW_LANE
@@ -48,9 +49,9 @@ stateDiagram-v2
 
 ## Placeholder Interfaces
 
-The Obstacle Challenge firmware will need these interfaces after the sensor is selected:
+The Obstacle Challenge firmware will need these interfaces after the HuskyLens is mounted and communication is tested:
 
-- `readTrafficSignColor()`
+- `readHuskyLensColor()`
 - `handleRedObstacle()`
 - `handleGreenObstacle()`
 - `recoverAfterObstacle()`
@@ -59,11 +60,11 @@ The Obstacle Challenge firmware will need these interfaces after the sensor is s
 
 ## Evidence To Collect
 
-- Selected color/vision sensor model.
-- Mounting photos.
+- HuskyLens mounting photos.
+- Selected communication method: I2C or UART.
 - Red and green detection samples under practice lighting.
-- Detection accuracy table.
+- Detection accuracy table with real measured trials.
 - False positive and false negative examples.
 - Recovery behavior after each obstacle.
-- Communication test between sensor and Arduino Mega.
-- Parking marker detection tests.
+- Communication test between HuskyLens and Arduino Mega.
+- Parking strategy decision and parking marker detection tests.

@@ -16,7 +16,7 @@ The Open Challenge firmware uses `Servo` for the MG996R, `analogWrite()` for the
 | Path | Purpose |
 | --- | --- |
 | `SKRobotics_OpenChallenge/SKRobotics_OpenChallenge.ino` | Arduino Mega Open Challenge base firmware using front/right ultrasonic sensing, right-wall following, and timed/sensor turn exits |
-| `SKRobotics_ObstacleChallenge/SKRobotics_ObstacleChallenge.ino` | Placeholder architecture for future red/green obstacle strategy after a color/vision sensor is selected |
+| `SKRobotics_ObstacleChallenge/SKRobotics_ObstacleChallenge.ino` | Placeholder architecture for future HuskyLens red/green obstacle strategy |
 | `calibration/ultrasonic_sensor_test/ultrasonic_sensor_test.ino` | Tests front and right ultrasonic readings |
 | `calibration/servo_sweep_test/servo_sweep_test.ino` | Finds safe MG996R steering center and limits |
 | `calibration/motor_driver_test/motor_driver_test.ino` | Arduino Mega L298N motor driver test, disabled by default |
