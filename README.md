@@ -60,17 +60,17 @@ This pin map comes from the final Arduino Mega code currently used by the team. 
 
 ## Technical Direction
 
-For the Open Challenge, the current strategy is side-opening detection with predictive corner steering. The robot reads the left and right ultrasonic sensors more often than the front sensor so that a wall-to-opening transition can trigger the turn early. The front sensor is used for safety, exit validation, and corner counting support.
+For the Open Challenge, the current strategy is high-speed side-opening detection with fixed-angle corner steering. The robot prioritizes the left and right ultrasonic sensors so that a wall-to-opening transition can trigger the turn early. The front sensor is only a secondary corner cue and is not used to stop the robot during a run.
 
 The planned behavior is:
 
-1. Start driving after power-on and sensor warmup.
+1. Start driving immediately after power-on.
 2. Drive forward while reading front, right, and left ultrasonic sensors.
 3. Detect the driving direction from the first reliable side opening.
 4. Start turns from side wall-to-opening transitions when possible.
-5. Use the front ultrasonic sensor for safety and turn-exit validation.
-6. Apply turn, fine-align, and countersteer phases.
-7. Count 12 corners, advance through the final straight, and stop.
+5. Use fixed left/right servo angles during each turn.
+6. Recenter, exit the turn, and rearm the next corner.
+7. Count 12 corners, run the final straight, brake, and stop.
 
 This is a practical approach for the hardware currently available. The Open Challenge code now uses three ultrasonic sensors and includes 12-corner counting plus final stop behavior. The HuskyLens is installed and ready for Obstacle Challenge development, but it is not integrated into the active code yet.
 
@@ -131,13 +131,13 @@ This repository follows the public WRO Future Engineers template structure and e
 
 The starter firmware is designed around a finite state machine. That makes the robot behavior easier to explain, test, and improve. The Open Challenge sketch separates these responsibilities:
 
-- `STATE_FIND_DIRECTION`: center and detect the first reliable side opening.
-- `STATE_CRUISE`: follow the track and watch side openings.
-- `STATE_CONFIRM_SIDES`: confirm new side readings before committing to a turn.
-- `STATE_TURNING`: execute the main turn phase.
-- `STATE_FINE_ALIGN`: apply the second steering correction.
-- `STATE_EXIT_TURN`: countersteer and recover into the next straight.
-- `STATE_FINAL_ADVANCE`: advance after the twelfth corner.
+- `STATE_STARTUP`: reserved startup state; the current setup enters straight driving immediately.
+- `STATE_STRAIGHT`: drive forward, prioritize side sensors, and detect the next opening.
+- `STATE_TURN`: hold the calibrated fixed steering angle until the new wall is reacquired or the turn timeout is reached.
+- `STATE_ALIGN`: center the wheels briefly after a completed corner.
+- `STATE_EXIT`: recover out of the corner and rearm the next turn.
+- `STATE_FINAL_RUN`: drive the final straight after corner 12.
+- `STATE_FINAL_BRAKE`: actively brake before stopping.
 - `STATE_STOPPED`: stop after three laps.
 
 The current Open Challenge version uses the Arduino Mega, three ultrasonic sensors, the MG996R steering servo, and the L298N motor driver. Constants are grouped at the top of the sketch so testing can be done methodically.
@@ -161,8 +161,8 @@ The Open Challenge rewards completing three laps and stopping correctly. Our fir
 
 1. Verify the Arduino Mega pin map.
 2. Build a repeatable side-opening detection baseline.
-3. Tune side-opening and front fallback thresholds for early corner entry.
-4. Tune turn timing, fine alignment, and countersteer so the robot exits corners consistently.
+3. Tune side-opening and front-count thresholds for early corner entry.
+4. Tune independent left/right turn timing, alignment, and exit timing so the robot exits corners consistently.
 5. Reduce oscillation by limiting lateral correction.
 6. Use 12-corner counting and final advance/stop behavior from the current firmware.
 
@@ -204,7 +204,7 @@ Priority tests:
 - Motor PWM response with the L298N.
 - Corner prefire threshold test.
 - Three lap consistency test.
-- Turn counting and final stop test with the current firmware.
+- Turn counting, final run, active brake, and final stop test with the current firmware.
 - Future HuskyLens red/green detection test after Arduino communication is added.
 
 ## Reproducibility Checklist

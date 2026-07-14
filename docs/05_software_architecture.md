@@ -4,34 +4,32 @@
 
 The software is written for Arduino Mega 2560 using Arduino C++. The current Open Challenge implementation uses three HC-SR04 ultrasonic sensors, an MG996R steering servo, and an L298N motor driver.
 
-The code does not use a start button, status LED, encoder, gyroscope, or color sensor code. It starts automatically when powered, reads the ultrasonic sensors without blocking the main control loop, counts 12 corners for three laps, advances on the final straight, and stops.
+The code does not use a start button, status LED, encoder, gyroscope, or color sensor code. It starts driving immediately when powered, reads the ultrasonic sensors with timed `pulseIn()` calls in a side-prioritized sequence, counts 12 corners for three laps, runs the final straight, actively brakes, and stops.
 
 ## Open Challenge State Machine
 
 ```mermaid
 stateDiagram-v2
-    [*] --> STATE_FIND_DIRECTION
-    STATE_FIND_DIRECTION --> STATE_CRUISE: first side opening confirms direction
-    STATE_CRUISE --> STATE_CONFIRM_SIDES: side opening or front fallback
-    STATE_CONFIRM_SIDES --> STATE_TURNING: turn direction confirmed
-    STATE_TURNING --> STATE_FINE_ALIGN: main turn phase complete
-    STATE_FINE_ALIGN --> STATE_EXIT_TURN: alignment complete
-    STATE_EXIT_TURN --> STATE_CRUISE: corner counted and next turn armed
-    STATE_EXIT_TURN --> STATE_FINAL_ADVANCE: corner 12 completed
-    STATE_FINAL_ADVANCE --> STATE_STOPPED: final advance timer complete
-    STATE_CRUISE --> STATE_SAFETY_STOP: front hard stop threshold
+    [*] --> STATE_STRAIGHT
+    STATE_STRAIGHT --> STATE_TURN: side opening detected
+    STATE_TURN --> STATE_ALIGN: wall reacquired or turn timeout
+    STATE_ALIGN --> STATE_EXIT: alignment timer complete
+    STATE_EXIT --> STATE_STRAIGHT: corner counted and next turn armed
+    STATE_EXIT --> STATE_FINAL_RUN: corner 12 completed
+    STATE_FINAL_RUN --> STATE_FINAL_BRAKE: final run timer complete
+    STATE_FINAL_BRAKE --> STATE_STOPPED: brake timer complete
 ```
 
 ## Main Modules
 
 | Module | Responsibility |
 | --- | --- |
-| Non-blocking sonar scheduler | Reads right, left, and front HC-SR04 sensors in a repeated order |
-| Median filtering | Reduces noisy ultrasonic readings |
+| Timed sonar reader | Reads left, right, and front HC-SR04 sensors with a short `pulseIn()` timeout |
+| Exponential filtering | Smooths usable ultrasonic readings for steering and decisions |
 | Direction detection | Uses the first reliable side opening to choose left or right track direction |
 | Side-opening turn trigger | Starts turns from wall-to-opening transitions on the lateral sensors |
-| Front fallback and safety | Uses the front sensor for approach, hard stop, and turn-exit evidence |
-| Turn sequence | Applies turn entry, fine alignment, countersteer, and recovery phases |
+| Front corner cue | Uses the front sensor as secondary corner evidence, not as a race stop trigger |
+| Turn sequence | Holds a fixed calibrated steering angle, centers, exits, and rearms the next corner |
 | Corner/lap counting | Counts 12 corners, equal to three laps |
 | Motor output | Sends PWM and direction commands to the L298N motor driver |
 | Servo output | Commands MG996R steering angles |
@@ -44,19 +42,20 @@ stateDiagram-v2
 - `PIN_FRONT_TRIG` / `PIN_FRONT_ECHO`: front ultrasonic on D42/D43.
 - `PIN_RIGHT_TRIG` / `PIN_RIGHT_ECHO`: right ultrasonic on D46/D47.
 - `PIN_LEFT_TRIG` / `PIN_LEFT_ECHO`: left ultrasonic on D52/D53.
-- `TOTAL_TURNS`: 12 corners for three laps.
-- `SIDE_OPEN_CM`: side distance interpreted as an opening.
-- `FRONT_TURN_CM`: front fallback threshold for turn capture.
-- `TURN_MIN_MS` and `TURN_MAX_MS`: turn timing limits.
-- `FINAL_ADVANCE_MS`: forward time after corner 12 before stopping.
-- `SERIAL_DEBUG`: enables Serial Monitor telemetry at 115200 baud.
+- `CORNERS_TO_FINISH`: 12 corners for three laps.
+- `SIDE_TURN_TRIGGER_CM`: side distance interpreted as an opening.
+- `FRONT_COUNT_CM`: front distance used as secondary corner evidence.
+- `MIN_LEFT_TURN_MS` / `MAX_LEFT_TURN_MS`: left turn timing limits.
+- `MIN_RIGHT_TURN_MS` / `MAX_RIGHT_TURN_MS`: right turn timing limits.
+- `FINAL_RUN_MS` and `FINAL_BRAKE_MS`: final straight and active brake timing.
+- `DEBUG_INTERVAL_MS`: Serial Monitor telemetry interval at 115200 baud.
 
 ## Known Edge Cases
 
 - Ultrasonic readings can fail on angled surfaces.
-- The L298N direction may be inverted and is controlled by `MOTOR_INVERTED`.
+- The L298N direction may need changing through `MOTOR_FORWARD_IN1` and `MOTOR_FORWARD_IN2`.
 - Steering geometry may need retuning through the servo constants.
-- The robot has no gyroscope or encoder, so turn quality depends on ultrasonic exit conditions and timing.
+- The robot has no gyroscope or encoder, so turn quality depends on side-opening detection, wall reacquisition, and timing.
 - HuskyLens obstacle and parking logic is planned but not integrated into this Open Challenge firmware.
 
 ## Build Instructions

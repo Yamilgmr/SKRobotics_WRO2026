@@ -24,8 +24,8 @@ The starter code uses these default values:
 
 ```cpp
 static const int SERVO_CENTER = 90;
-static const int SERVO_LEFT = 35;
-static const int SERVO_RIGHT = 110;
+static const int SERVO_LEFT = 10;
+static const int SERVO_RIGHT = 120;
 ```
 
 These values match the current base firmware convention. They still need physical validation with the wheels lifted, because the safest software limits depend on the final servo horn and steering linkage geometry.
@@ -44,18 +44,20 @@ Evidence to collect:
 
 ## Prefire Cornering
 
-The team wants the robot to turn without stopping. The current prefire method starts a steering turn when a side sensor changes from wall to opening, while the front sensor remains available as a fallback and safety reference. The expected benefit is lower lap time. The main risk is that the car still has no gyroscope or encoder, so turn quality depends on ultrasonic readings, timing, and the mechanical steering limits.
+The team wants the robot to turn without stopping. The current prefire method starts a steering turn when a side sensor changes from wall to opening. During the turn, the servo holds a fixed calibrated angle until the new wall is reacquired or the turn timeout is reached. The expected benefit is lower lap time. The main risk is that the car still has no gyroscope or encoder, so turn quality depends on ultrasonic readings, timing, and the mechanical steering limits.
 
 Variables to tune:
 
-- `SIDE_OPEN_CM`
-- `FRONT_TURN_CM`
-- `TURN_EXIT_FRONT_CM`
-- `WALL_TARGET_CM`
-- `TURN_MIN_MS`
-- `TURN_MAX_MS`
-- `ALIGN_MIN_MS`
-- `ALIGN_MAX_MS`
+- `SIDE_TURN_TRIGGER_CM`
+- `FRONT_COUNT_CM`
+- `LEFT_WALL_REACQUIRED_CM`
+- `RIGHT_WALL_REACQUIRED_CM`
+- `MIN_LEFT_TURN_MS`
+- `MAX_LEFT_TURN_MS`
+- `MIN_RIGHT_TURN_MS`
+- `MAX_RIGHT_TURN_MS`
+- `ALIGN_MS`
+- `EXIT_MS`
 - `SERVO_LEFT_DEG`
 - `SERVO_RIGHT_DEG`
 

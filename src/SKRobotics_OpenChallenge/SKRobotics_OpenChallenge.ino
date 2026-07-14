@@ -1,13 +1,26 @@
+/*
+  WRO Future Engineers 2026 - Open Challenge
+  Robot: Olibot Ackermann + Arduino Mega 2560 + MG996R + L298N
+  Sensors: 3 x HC-SR04 (front, right, left)
+
+  IMPORTANT
+  - No start button or initial delay: starts moving immediately.
+  - 3 laps = 12 completed corners. CORNERS_TO_FINISH must remain 12.
+  - Side sensors are the primary corner detectors.
+  - The front sensor is only a secondary corner cue and collision guard.
+  - All physical calibration values are grouped at the top.
+  - This program intentionally uses only the standard Servo library.
+*/
+
 #include <Servo.h>
 
-// -----------------------------------------------------------------------------
-// PIN MAP CONFIRMADO
-// -----------------------------------------------------------------------------
-
-const uint8_t PIN_SERVO      = 9;
-const uint8_t PIN_ENA        = 5;   // PWM del motor: analogWrite()
-const uint8_t PIN_IN1        = 6;   // Direccion L298N
-const uint8_t PIN_IN2        = 7;   // Direccion L298N
+// ============================================================================
+// 1. PIN MAP
+// ============================================================================
+const uint8_t PIN_SERVO = 9;
+const uint8_t PIN_ENA = 5;   // PWM: must keep the ENA jumper removed
+const uint8_t PIN_IN1 = 6;
+const uint8_t PIN_IN2 = 7;
 
 const uint8_t PIN_FRONT_TRIG = 42;
 const uint8_t PIN_FRONT_ECHO = 43;
@@ -16,1013 +29,642 @@ const uint8_t PIN_RIGHT_ECHO = 47;
 const uint8_t PIN_LEFT_TRIG  = 52;
 const uint8_t PIN_LEFT_ECHO  = 53;
 
-// -----------------------------------------------------------------------------
-// CALIBRACION FISICA - AJUSTAR EN ESTE ORDEN
-// -----------------------------------------------------------------------------
+// Change these two levels only if the rear motor turns backwards.
+const uint8_t MOTOR_FORWARD_IN1 = HIGH;
+const uint8_t MOTOR_FORWARD_IN2 = LOW;
 
-// 1) Direccion del motor y del servo.
-const bool MOTOR_INVERTED    = false;
-const bool STEERING_INVERTED = false;
+// ============================================================================
+// 2. SERVO CALIBRATION
+// ============================================================================
+// Solo tres posiciones fisicas. El servo no cambia de angulo dentro del giro.
+const int16_t SERVO_LEFT_DEG        = 10;
+const int16_t SERVO_CENTER_DEG      = 90;
+const int16_t SERVO_RIGHT_DEG       = 120;
+const int16_t SERVO_MIN_DEG         = 10;
+const int16_t SERVO_MAX_DEG         = 120;
 
-// 2) Angulos reales medidos en el mecanismo Ackermann.
-// Al detectar abertura aplica inmediatamente el angulo de giro configurado.
-const int16_t SERVO_LEFT_ENTRY_DEG  = 45;
-const int16_t SERVO_LEFT_DEG        = 35;
-const int16_t SERVO_CENTER_DEG = 90;
-const int16_t SERVO_RIGHT_ENTRY_DEG = 90;
-const int16_t SERVO_RIGHT_DEG       = 110;
-const int16_t SERVO_LEFT_ALIGN_DEG  = 45;
-const int16_t SERVO_RIGHT_ALIGN_DEG = 118;
-const int16_t SERVO_MIN_DEG    = SERVO_LEFT_DEG;
-const int16_t SERVO_MAX_DEG    = SERVO_RIGHT_DEG;
+// Reverse this if a smaller servo angle physically turns the wheels right.
+const bool SERVO_SMALL_ANGLE_IS_LEFT = true;
 
-// 3) Velocidades PWM. Empieza bajo y aumenta solo despues de estabilizar giros.
-const uint8_t START_PWM         = 200;
-const uint8_t CRUISE_PWM        = 195;
-const uint8_t APPROACH_PWM      = 170;
-const uint8_t DECISION_PWM      = 145;
-const uint8_t TURN_PWM          = 255;
-const uint8_t ALIGN_PWM         = 180;
-const uint8_t EXIT_PWM          = 170;
-const uint8_t FINAL_PWM         = 185;
+// ============================================================================
+// 3. MOTOR CALIBRATION (0..255)
+// ============================================================================
+const uint8_t START_PWM    = 255; // Salida fuerte sin usar siempre el maximo.
+const uint8_t CRUISE_PWM   = 200; // Un poco mas rapido sin usar 255 en recta.
+const uint8_t DECISION_PWM = 190; // Rapido mientras decide el primer sentido.
+const uint8_t TURN_PWM     = 245;
+const uint8_t ALIGN_PWM    = 205; // Estabiliza al centrar las ruedas.
+const uint8_t EXIT_PWM     = 245; // Recupera velocidad al salir.
+const uint8_t FINAL_PWM    = 205; // Recta final controlada antes de frenar.
 
-// 4) Geometria de la pista y posicion de los sensores, en centimetros.
-const uint16_t WALL_TARGET_CM          = 28;
-const uint16_t WALL_SEEN_MAX_CM        = 78;
-const uint16_t SIDE_OPEN_CM            = 110;
-const uint16_t FRONT_APPROACH_CM       = 130;
-// Respaldo si ningun lateral alcanzo a detectar antes la abertura.
-const uint16_t FRONT_TURN_CM           = 100;
-const uint16_t FRONT_DECISION_STOP_CM  = 42;
-const uint16_t FRONT_HARD_STOP_CM      = 10;
-// El giro conserva la secuencia estable anterior; el frontal solo interviene
-// para reconocer que el carro ya mira hacia la nueva recta.
-const uint16_t TURN_EXIT_FRONT_CM      = 100;
-const uint16_t TURN_EXIT_WALL_MAX_CM   = 105;
-const uint16_t TURN_EXIT_SIDE_MAX_CM   = 130;
-const uint16_t ALIGN_FRONT_CLEAR_CM    = 145;
-const uint16_t ALIGN_SIDE_MAX_CM       = 130;
-const uint16_t WALL_FOLLOW_MAX_CM      = 95;
+// Soft ramp protects the gearbox and supply from abrupt PWM steps.
+const uint8_t PWM_RAMP_STEP = 10;
+const uint16_t PWM_RAMP_INTERVAL_MS = 8;
 
-// Separacion medida entre las caras de los dos sensores laterales: 10.1 cm.
-// Se conserva en milimetros para no perder el milimetro de la medicion.
-const uint16_t LATERAL_SENSOR_SPAN_MM  = 101;
+// ============================================================================
+// 4. TRACK AND ULTRASONIC CALIBRATION
+// ============================================================================
+const float TRACK_CORRIDOR_CM = 100.0f;
+const float SENSOR_OUTER_SPAN_CM = 10.1f;
+// The official Open Challenge can use a corridor near 100 cm or 60 cm. This
+// starts at 100 cm, then updates automatically whenever both walls are seen.
+float estimatedCorridorCm = TRACK_CORRIDOR_CM;
 
-// 5) Tiempo de giro. Son limites de seguridad, no delays bloqueantes.
-const uint16_t TURN_MIN_MS             = 520;
-const uint16_t TURN_MAX_MS             = 900;
-// Antirrepeticion: ademas se exige volver a ver pared en ambos laterales.
-const uint16_t MIN_CORNER_INTERVAL_MS  = 450;
-const uint16_t TURN_ENTRY_STEERING_MS  = 0;
-const uint16_t ALIGN_MIN_MS            = 260;
-const uint16_t ALIGN_MAX_MS            = 750;
-const uint16_t EXIT_COUNTERSTEER_MS    = 120;
-const uint16_t EXIT_RECOVERY_MS        = 420;
-const int16_t  EXIT_COUNTERSTEER_DEG   = 8;
+const uint16_t SONAR_MAX_CM = 220;
+const uint16_t SONAR_TIMEOUT_US = 13000; // approximately 220 cm
+const uint16_t PING_GAP_MS = 18;
 
-// Tiempo que avanza en la recta inicial despues de completar la esquina 12.
-const uint16_t FINAL_ADVANCE_MS        = 1600;
+const uint16_t SIDE_TURN_TRIGGER_CM = 68;
+const uint16_t SIDE_WALL_VISIBLE_CM = 60;
+// El giro derecho ya esta calibrado. El izquierdo acepta antes la pared nueva
+// porque con la direccion a 10 grados cruza la esquina mucho mas rapidamente.
+const uint16_t LEFT_WALL_REACQUIRED_CM  = 70;
+const uint16_t RIGHT_WALL_REACQUIRED_CM = 50;
+const uint16_t WALL_PRESENT_CM = 62;
+const uint16_t MIN_USABLE_CM = 3;
 
-// Control PD lateral. Kp corrige distancia; Kd reduce oscilacion.
-const float WALL_KP                    = 0.42f;
-const float WALL_KD                    = 0.85f;
-const int16_t WALL_MAX_STEERING_DEG    = 13;
+const uint16_t FRONT_COUNT_CM = 65;
 
-// Centrado antes de conocer el sentido de la pista.
-const float PRE_DIRECTION_KP           = 0.32f;
-const int16_t PRE_DIRECTION_MAX_DEG    = 9;
+// One lateral opening starts the steering immediately. Duplicate counting is
+// prevented by cornerArmed and by wall reacquisition after every turn.
+// Una sola lectura lateral valida mayor de 100 cm inicia el giro inmediatamente.
+const uint8_t OPEN_CONFIRM_READS = 1;
+const uint8_t LEFT_WALL_CONFIRM_READS  = 1;
+const uint8_t RIGHT_WALL_CONFIRM_READS = 2;
+const uint8_t FRONT_COUNT_CONFIRM_READS = 2;
 
-// Monitor serie. Desactivalo para la corrida final si no lo necesitas.
-const bool SERIAL_DEBUG                = true;
-const uint16_t DEBUG_INTERVAL_MS       = 200;
+// Straight-line correction. Keep this intentionally small without an IMU.
+const float STEERING_KP_DEG_PER_CM = 0.24f;
+const int8_t MAX_STRAIGHT_CORRECTION_DEG = 10;
+const uint8_t STEERING_DEADBAND_CM = 3;
 
-// -----------------------------------------------------------------------------
-// CONSTANTES INTERNAS
-// -----------------------------------------------------------------------------
+// ============================================================================
+// 5. MANEUVER TIMING
+// ============================================================================
+// No compartir los tiempos: el servo izquierdo (10 grados) gira mucho mas
+// cerrado que el derecho (120 grados). Se conserva intacto el giro horario.
+const uint16_t MIN_LEFT_TURN_MS  = 450;
+const uint16_t MAX_LEFT_TURN_MS  = 2250;
+const uint16_t MIN_RIGHT_TURN_MS = 450;
+const uint16_t MAX_RIGHT_TURN_MS = 2300;
+const uint16_t ALIGN_MS = 220;
+const uint16_t EXIT_MS = 200;
 
-const uint8_t TOTAL_TURNS              = 12;
-const uint16_t MAX_DISTANCE_CM         = 240;
-const uint16_t MIN_DISTANCE_CM         = 3;
-const uint8_t FILTER_SAMPLES           = 5;
+const uint8_t CORNERS_TO_FINISH = 12; // 4 corners x 3 laps
+// Distance after the 12th corner. Calibrate this to stop inside the start area.
+const uint16_t FINAL_RUN_MS = 850;
+const uint16_t FINAL_BRAKE_MS = 350;
 
-const uint32_t ECHO_RISE_TIMEOUT_US    = 3000UL;
-const uint32_t ECHO_MAX_US             = 14500UL;
-const uint32_t INTER_SENSOR_GAP_US     = 18000UL;
+const uint16_t DEBUG_INTERVAL_MS = 250;
+const uint16_t INITIAL_TURN_GUARD_MS = 300;
 
-const uint8_t WALL_CONFIRM_SAMPLES     = 2;
-// Una sola lectura cruda de abertura dispara el giro inmediatamente.
-const uint8_t OPEN_CONFIRM_SAMPLES     = 1;
-const uint8_t SIDE_WALL_CONFIRM_SAMPLES = 2;
-const uint8_t FRONT_CONFIRM_SAMPLES    = 2;
-const uint8_t TURN_EXIT_CONFIRM_SAMPLES = 2;
-const uint8_t ALIGN_CONFIRM_SAMPLES    = 2;
+// ============================================================================
+// 6. TYPES AND STATE
+// ============================================================================
+enum Direction : int8_t {
+  DIR_UNKNOWN = 0,
+  DIR_LEFT = -1,
+  DIR_RIGHT = 1
+};
 
-const uint16_t SENSOR_FRESH_MS         = 550;
-const uint16_t CONTROL_INTERVAL_MS     = 20;
-const uint16_t STARTUP_RAMP_MS         = 450;
-
-// -----------------------------------------------------------------------------
-// TIPOS Y ESTADO GLOBAL
-// -----------------------------------------------------------------------------
+enum DriveState : uint8_t {
+  STATE_STARTUP,
+  STATE_STRAIGHT,
+  STATE_TURN,
+  STATE_ALIGN,
+  STATE_EXIT,
+  STATE_FINAL_RUN,
+  STATE_FINAL_BRAKE,
+  STATE_STOPPED
+};
 
 enum SensorId : uint8_t {
-  SENSOR_FRONT = 0,
-  SENSOR_RIGHT = 1,
-  SENSOR_LEFT  = 2,
-  SENSOR_COUNT = 3
+  SENSOR_LEFT,
+  SENSOR_RIGHT,
+  SENSOR_FRONT
 };
 
-enum PingPhase : uint8_t {
-  PING_IDLE,
-  PING_TRIGGER_HIGH,
-  PING_WAIT_RISE,
-  PING_WAIT_FALL
-};
-
-enum TrackDirection : int8_t {
-  DIRECTION_UNKNOWN = 0,
-  DIRECTION_LEFT    = -1,
-  DIRECTION_RIGHT   = 1
-};
-
-enum RobotState : uint8_t {
-  STATE_FIND_DIRECTION,
-  STATE_CRUISE,
-  STATE_CONFIRM_SIDES,
-  STATE_TURNING,
-  STATE_FINE_ALIGN,
-  STATE_EXIT_TURN,
-  STATE_FINAL_ADVANCE,
-  STATE_STOPPED,
-  STATE_SAFETY_STOP
-};
-
-struct SonarData {
-  uint8_t trigPin;
-  uint8_t echoPin;
+struct SonarReading {
   uint16_t rawCm;
-  uint16_t filteredCm;
-  uint16_t history[FILTER_SAMPLES];
-  uint8_t historyCount;
-  uint8_t historyIndex;
-  uint8_t wallStreak;
-  uint8_t openStreak;
-  bool wallSeen;
-  uint32_t lastSampleMs;
-  uint32_t sequence;
+  float filteredCm;
+  uint8_t openHits;
+  uint8_t wallHits;
+  uint8_t criticalHits;
+  bool initialized;
+  unsigned long updatedAt;
 };
 
-Servo steeringServo;
+Servo steering;
+SonarReading sonarLeft  = {SONAR_MAX_CM, SONAR_MAX_CM, 0, 0, 0, false, 0};
+SonarReading sonarRight = {SONAR_MAX_CM, SONAR_MAX_CM, 0, 0, 0, false, 0};
+SonarReading sonarFront = {SONAR_MAX_CM, SONAR_MAX_CM, 0, 0, 0, false, 0};
 
-SonarData sonar[SENSOR_COUNT] = {
-  {PIN_FRONT_TRIG, PIN_FRONT_ECHO, MAX_DISTANCE_CM, MAX_DISTANCE_CM,
-   {MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM},
-   0, 0, 0, 0, false, 0, 0},
-  {PIN_RIGHT_TRIG, PIN_RIGHT_ECHO, MAX_DISTANCE_CM, MAX_DISTANCE_CM,
-   {MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM},
-   0, 0, 0, 0, false, 0, 0},
-  {PIN_LEFT_TRIG, PIN_LEFT_ECHO, MAX_DISTANCE_CM, MAX_DISTANCE_CM,
-   {MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM, MAX_DISTANCE_CM},
-   0, 0, 0, 0, false, 0, 0}
-};
+Direction direction = DIR_UNKNOWN;
+DriveState state = STATE_STARTUP;
 
-// Se consultan los laterales mas veces que el frontal para reaccionar antes.
-// Cada lateral aparece dos veces y el frontal una vez por ciclo.
-const SensorId PING_ORDER[] = {
-  SENSOR_RIGHT, SENSOR_LEFT, SENSOR_FRONT, SENSOR_RIGHT, SENSOR_LEFT
-};
-const uint8_t PING_ORDER_COUNT = sizeof(PING_ORDER) / sizeof(PING_ORDER[0]);
+uint8_t completedCorners = 0;
+bool cornerArmed = true;
+bool turnSawOpenSide = false;
+uint8_t frontCountHits = 0;
+bool frontCornerSeen = false;
 
-PingPhase pingPhase = PING_IDLE;
-uint8_t pingOrderIndex = 0;
-uint8_t activeSensor = PING_ORDER[0];
-uint32_t pingPhaseAtUs = 0;
-uint32_t echoRiseAtUs = 0;
-uint32_t nextPingAtUs = 0;
+unsigned long stateStartedAt = 0;
+unsigned long lastCornerCompletedAt = 0;
+unsigned long nextPingAt = 0;
+unsigned long lastDebugAt = 0;
+unsigned long lastPwmRampAt = 0;
+unsigned long raceStartedAt = 0;
 
-TrackDirection trackDirection = DIRECTION_UNKNOWN;
-RobotState robotState = STATE_FIND_DIRECTION;
+uint8_t sensorSequenceIndex = 0;
+uint8_t motorCurrentPwm = 0;
+uint8_t motorTargetPwm = 0;
+int16_t lastServoCommand = -999;
+bool leftSensorSampled = false;
+bool rightSensorSampled = false;
 
-uint8_t completedTurns = 0;
-uint8_t frontCloseStreak = 0;
-uint8_t turnExitStreak = 0;
-uint8_t alignmentStreak = 0;
-uint8_t decisionLeftOpenStreak = 0;
-uint8_t decisionRightOpenStreak = 0;
-uint8_t decisionLeftWallStreak = 0;
-uint8_t decisionRightWallStreak = 0;
-uint32_t lastProcessedFrontSequence = 0;
-uint32_t lastAlignmentFrontSequence = 0;
-uint32_t decisionLeftStartSequence = 0;
-uint32_t decisionRightStartSequence = 0;
-bool nextCornerArmed = false;
-
-uint32_t bootAtMs = 0;
-uint32_t stateAtMs = 0;
-uint32_t lastTurnCompletedMs = 0;
-uint32_t lastControlMs = 0;
-uint32_t lastDebugMs = 0;
-
-float previousWallError = 0.0f;
-bool previousWallErrorValid = false;
-
-uint8_t targetMotorPwm = 0;
-uint8_t currentMotorPwm = 0;
-uint32_t lastMotorRampMs = 0;
-bool brakeActive = false;
-int16_t lastServoAngle = SERVO_CENTER_DEG;
-
-// -----------------------------------------------------------------------------
-// UTILIDADES
-// -----------------------------------------------------------------------------
-
-bool timeReachedUs(uint32_t now, uint32_t target) {
-  return (int32_t)(now - target) >= 0;
+// ============================================================================
+// 7. LOW-LEVEL MOTOR AND SERVO
+// ============================================================================
+int16_t clampServo(int16_t angle) {
+  return constrain(angle, SERVO_MIN_DEG, SERVO_MAX_DEG);
 }
 
-uint8_t saturatingIncrement(uint8_t value) {
-  return (value < 255) ? (uint8_t)(value + 1) : value;
+void setSteering(int16_t angle) {
+  int16_t command = clampServo(angle);
+  // No reenviar el mismo angulo continuamente: el servo solo recibe una orden
+  // al entrar al giro y otra al volver al centro.
+  if (command == lastServoCommand) return;
+  steering.write(command);
+  lastServoCommand = command;
 }
 
-const __FlashStringHelper* stateName(RobotState state) {
-  switch (state) {
-    case STATE_FIND_DIRECTION: return F("BUSCANDO_SENTIDO");
-    case STATE_CRUISE:         return F("RECTA");
-    case STATE_CONFIRM_SIDES:  return F("CONFIRMANDO_LADOS");
-    case STATE_TURNING:        return F("GIRANDO");
-    case STATE_FINE_ALIGN:      return F("AJUSTE_GIRO");
-    case STATE_EXIT_TURN:      return F("SALIDA_GIRO");
-    case STATE_FINAL_ADVANCE:  return F("AVANCE_FINAL");
-    case STATE_STOPPED:        return F("DETENIDO");
-    case STATE_SAFETY_STOP:    return F("PARADA_SEGURIDAD");
-  }
-  return F("DESCONOCIDO");
+int16_t leftServoAngle(int16_t calibratedAngle) {
+  if (SERVO_SMALL_ANGLE_IS_LEFT) return calibratedAngle;
+  return SERVO_CENTER_DEG + (SERVO_CENTER_DEG - calibratedAngle);
 }
 
-const __FlashStringHelper* directionName(TrackDirection direction) {
-  if (direction == DIRECTION_LEFT) return F("IZQUIERDA");
-  if (direction == DIRECTION_RIGHT) return F("DERECHA");
-  return F("SIN_DEFINIR");
-}
-
-bool sensorFresh(SensorId id) {
-  return sonar[id].sequence > 0 &&
-         (uint32_t)(millis() - sonar[id].lastSampleMs) <= SENSOR_FRESH_MS;
-}
-
-SensorId outerWallSensor() {
-  return (trackDirection == DIRECTION_RIGHT) ? SENSOR_LEFT : SENSOR_RIGHT;
-}
-
-// -----------------------------------------------------------------------------
-// MOTOR Y DIRECCION
-// -----------------------------------------------------------------------------
-
-void applyForwardPwm(uint8_t pwm) {
-  if (MOTOR_INVERTED) {
-    digitalWrite(PIN_IN1, LOW);
-    digitalWrite(PIN_IN2, HIGH);
-  } else {
-    digitalWrite(PIN_IN1, HIGH);
-    digitalWrite(PIN_IN2, LOW);
-  }
-  analogWrite(PIN_ENA, pwm);
+int16_t rightServoAngle(int16_t calibratedAngle) {
+  if (SERVO_SMALL_ANGLE_IS_LEFT) return calibratedAngle;
+  return SERVO_CENTER_DEG - (calibratedAngle - SERVO_CENTER_DEG);
 }
 
 void setMotorTarget(uint8_t pwm) {
-  targetMotorPwm = pwm;
-  brakeActive = false;
+  motorTargetPwm = pwm;
 }
 
-void brakeMotor() {
-  targetMotorPwm = 0;
-  currentMotorPwm = 0;
-  brakeActive = true;
+void enableForwardDirection() {
+  digitalWrite(PIN_IN1, MOTOR_FORWARD_IN1);
+  digitalWrite(PIN_IN2, MOTOR_FORWARD_IN2);
+}
+
+void updateMotorRamp(unsigned long now) {
+  if (now - lastPwmRampAt < PWM_RAMP_INTERVAL_MS) return;
+  lastPwmRampAt = now;
+
+  if (motorCurrentPwm < motorTargetPwm) {
+    uint16_t next = motorCurrentPwm + PWM_RAMP_STEP;
+    motorCurrentPwm = (next > motorTargetPwm) ? motorTargetPwm : next;
+  } else if (motorCurrentPwm > motorTargetPwm) {
+    int16_t next = motorCurrentPwm - PWM_RAMP_STEP;
+    motorCurrentPwm = (next < motorTargetPwm) ? motorTargetPwm : next;
+  }
+
+  enableForwardDirection();
+  analogWrite(PIN_ENA, motorCurrentPwm);
+}
+
+void motorCoastStop() {
+  motorTargetPwm = 0;
+  motorCurrentPwm = 0;
+  analogWrite(PIN_ENA, 0);
+  digitalWrite(PIN_IN1, LOW);
+  digitalWrite(PIN_IN2, LOW);
+}
+
+void motorActiveBrake() {
+  motorTargetPwm = 0;
+  motorCurrentPwm = 0;
   digitalWrite(PIN_IN1, HIGH);
   digitalWrite(PIN_IN2, HIGH);
   analogWrite(PIN_ENA, 255);
 }
 
-void updateMotorRamp() {
-  if (brakeActive) return;
+// ============================================================================
+// 8. ULTRASONIC ACQUISITION
+// ============================================================================
+uint16_t readUltrasonicCm(uint8_t trigPin, uint8_t echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(3);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
 
-  uint32_t now = millis();
-  if ((uint32_t)(now - lastMotorRampMs) < 10) return;
-  lastMotorRampMs = now;
+  unsigned long duration = pulseIn(echoPin, HIGH, SONAR_TIMEOUT_US);
+  // Un timeout no se usa para decidir: evita giros falsos por sensor sin eco.
+  if (duration == 0) return 0;
 
-  if (currentMotorPwm < targetMotorPwm) {
-    uint16_t next = (uint16_t)currentMotorPwm + 4;
-    currentMotorPwm = (next > targetMotorPwm) ? targetMotorPwm : (uint8_t)next;
-  } else if (currentMotorPwm > targetMotorPwm) {
-    int16_t next = (int16_t)currentMotorPwm - 8;
-    currentMotorPwm = (next < targetMotorPwm) ? targetMotorPwm : (uint8_t)next;
-  }
-
-  applyForwardPwm(currentMotorPwm);
+  uint16_t cm = (uint16_t)(duration / 58UL);
+  if (cm < MIN_USABLE_CM) return MIN_USABLE_CM;
+  if (cm > SONAR_MAX_CM) return SONAR_MAX_CM;
+  return cm;
 }
 
-void writeServoAngle(int16_t angle) {
-  if (angle < SERVO_MIN_DEG) angle = SERVO_MIN_DEG;
-  if (angle > SERVO_MAX_DEG) angle = SERVO_MAX_DEG;
-  lastServoAngle = angle;
-  steeringServo.write(angle);
-}
+void updateReading(SonarReading &reading, uint16_t cm, bool isFront) {
+  reading.rawCm = cm;
+  reading.updatedAt = millis();
 
-void setSteeringOffset(int16_t logicalOffsetDeg) {
-  const int16_t minOffset = SERVO_MIN_DEG - SERVO_CENTER_DEG;
-  const int16_t maxOffset = SERVO_MAX_DEG - SERVO_CENTER_DEG;
-  if (logicalOffsetDeg < minOffset) logicalOffsetDeg = minOffset;
-  if (logicalOffsetDeg > maxOffset) logicalOffsetDeg = maxOffset;
-
-  int16_t physicalOffset = STEERING_INVERTED ? -logicalOffsetDeg : logicalOffsetDeg;
-  int16_t angle = SERVO_CENTER_DEG + physicalOffset;
-  writeServoAngle(angle);
-}
-
-void setTurnSteering() {
-  bool commandRight = (trackDirection == DIRECTION_RIGHT);
-  if (STEERING_INVERTED) commandRight = !commandRight;
-
-  bool entryPhase = (uint32_t)(millis() - stateAtMs) < TURN_ENTRY_STEERING_MS;
-  if (commandRight) {
-    writeServoAngle(entryPhase ? SERVO_RIGHT_ENTRY_DEG : SERVO_RIGHT_DEG);
-  } else {
-    writeServoAngle(entryPhase ? SERVO_LEFT_ENTRY_DEG : SERVO_LEFT_DEG);
-  }
-}
-
-void setFineAlignmentSteering() {
-  bool commandRight = (trackDirection == DIRECTION_RIGHT);
-  if (STEERING_INVERTED) commandRight = !commandRight;
-  writeServoAngle(commandRight ? SERVO_RIGHT_ALIGN_DEG : SERVO_LEFT_ALIGN_DEG);
-}
-
-// -----------------------------------------------------------------------------
-// FILTRO Y ESCANER ASINCRONO PARA HC-SR04
-// -----------------------------------------------------------------------------
-
-uint16_t medianDistance(const SonarData &s) {
-  uint8_t count = s.historyCount;
-  if (count == 0) return MAX_DISTANCE_CM;
-
-  uint16_t ordered[FILTER_SAMPLES];
-  for (uint8_t i = 0; i < count; i++) ordered[i] = s.history[i];
-
-  for (uint8_t i = 1; i < count; i++) {
-    uint16_t value = ordered[i];
-    int8_t j = (int8_t)i - 1;
-    while (j >= 0 && ordered[j] > value) {
-      ordered[j + 1] = ordered[j];
-      j--;
-    }
-    ordered[j + 1] = value;
-  }
-
-  return ordered[count / 2];
-}
-
-void updateSonarEvidence(SensorId id) {
-  SonarData &s = sonar[id];
-
-  if (id == SENSOR_FRONT) {
-    bool closeNow = (s.rawCm <= FRONT_TURN_CM) ||
-                    (s.filteredCm <= FRONT_TURN_CM);
-    frontCloseStreak = closeNow ? saturatingIncrement(frontCloseStreak) : 0;
+  if (cm == 0) {
+    reading.openHits = 0;
+    reading.wallHits = 0;
+    reading.criticalHits = 0;
+    if (isFront && !frontCornerSeen) frontCountHits = 0;
     return;
   }
 
-  if (s.rawCm >= MIN_DISTANCE_CM && s.rawCm <= WALL_SEEN_MAX_CM) {
-    s.wallStreak = saturatingIncrement(s.wallStreak);
-    if (s.wallStreak >= WALL_CONFIRM_SAMPLES) s.wallSeen = true;
+  if (!reading.initialized) {
+    reading.filteredCm = cm;
+    reading.initialized = true;
   } else {
-    s.wallStreak = 0;
+    // Fast enough for openings, but calmer than a raw reading for steering.
+    reading.filteredCm = (reading.filteredCm * 0.60f) + (cm * 0.40f);
   }
 
-  bool openingNow = s.wallSeen &&
-                    (s.rawCm >= SIDE_OPEN_CM || s.filteredCm >= SIDE_OPEN_CM);
-  s.openStreak = openingNow ? saturatingIncrement(s.openStreak) : 0;
-}
-
-void recordSonarSample(SensorId id, uint16_t distanceCm) {
-  SonarData &s = sonar[id];
-  if (distanceCm < MIN_DISTANCE_CM) distanceCm = MIN_DISTANCE_CM;
-  if (distanceCm > MAX_DISTANCE_CM) distanceCm = MAX_DISTANCE_CM;
-
-  s.rawCm = distanceCm;
-  s.history[s.historyIndex] = distanceCm;
-  s.historyIndex = (uint8_t)((s.historyIndex + 1) % FILTER_SAMPLES);
-  if (s.historyCount < FILTER_SAMPLES) s.historyCount++;
-  s.filteredCm = medianDistance(s);
-  s.lastSampleMs = millis();
-  s.sequence++;
-
-  updateSonarEvidence(id);
-}
-
-void finishActivePing(uint16_t distanceCm, uint32_t nowUs) {
-  digitalWrite(sonar[activeSensor].trigPin, LOW);
-  recordSonarSample((SensorId)activeSensor, distanceCm);
-
-  pingOrderIndex = (uint8_t)((pingOrderIndex + 1) % PING_ORDER_COUNT);
-  activeSensor = (uint8_t)PING_ORDER[pingOrderIndex];
-  pingPhase = PING_IDLE;
-  nextPingAtUs = nowUs + INTER_SENSOR_GAP_US;
-}
-
-void updateSonarScanner() {
-  uint32_t nowUs = micros();
-  SonarData &s = sonar[activeSensor];
-
-  switch (pingPhase) {
-    case PING_IDLE:
-      if (!timeReachedUs(nowUs, nextPingAtUs)) return;
-      digitalWrite(s.trigPin, HIGH);
-      pingPhaseAtUs = nowUs;
-      pingPhase = PING_TRIGGER_HIGH;
-      break;
-
-    case PING_TRIGGER_HIGH:
-      if ((uint32_t)(nowUs - pingPhaseAtUs) < 10UL) return;
-      digitalWrite(s.trigPin, LOW);
-      pingPhaseAtUs = nowUs;
-      pingPhase = PING_WAIT_RISE;
-      break;
-
-    case PING_WAIT_RISE:
-      if (digitalRead(s.echoPin) == HIGH) {
-        echoRiseAtUs = nowUs;
-        pingPhase = PING_WAIT_FALL;
-      } else if ((uint32_t)(nowUs - pingPhaseAtUs) >= ECHO_RISE_TIMEOUT_US) {
-        // Sin eco significa espacio libre o distancia mayor al rango util.
-        finishActivePing(MAX_DISTANCE_CM, nowUs);
-      }
-      break;
-
-    case PING_WAIT_FALL:
-      if (digitalRead(s.echoPin) == LOW) {
-        uint32_t echoDurationUs = nowUs - echoRiseAtUs;
-        uint16_t cm = (uint16_t)(echoDurationUs / 58UL);
-        if (cm < MIN_DISTANCE_CM || cm > MAX_DISTANCE_CM) cm = MAX_DISTANCE_CM;
-        finishActivePing(cm, nowUs);
-      } else if ((uint32_t)(nowUs - echoRiseAtUs) >= ECHO_MAX_US) {
-        finishActivePing(MAX_DISTANCE_CM, nowUs);
-      }
-      break;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// LOGICA DE NAVEGACION
-// -----------------------------------------------------------------------------
-
-void changeState(RobotState nextState) {
-  robotState = nextState;
-  stateAtMs = millis();
-
-  if (SERIAL_DEBUG) {
-    Serial.print(F("EVENTO | Estado -> "));
-    Serial.println(stateName(nextState));
-  }
-}
-
-void safetyStop(const __FlashStringHelper *reason) {
-  setSteeringOffset(0);
-  brakeMotor();
-  changeState(STATE_SAFETY_STOP);
-  if (SERIAL_DEBUG) {
-    Serial.print(F("PARADA DE SEGURIDAD | "));
-    Serial.println(reason);
-  }
-}
-
-int16_t preDirectionSteering() {
-  if (!sensorFresh(SENSOR_LEFT) || !sensorFresh(SENSOR_RIGHT)) return 0;
-
-  uint16_t left = sonar[SENSOR_LEFT].filteredCm;
-  uint16_t right = sonar[SENSOR_RIGHT].filteredCm;
-  if (left > WALL_FOLLOW_MAX_CM || right > WALL_FOLLOW_MAX_CM) return 0;
-
-  // Cada HC-SR04 mide desde su propia cara. Sumamos media separacion para
-  // comparar la distancia de cada pared al centro real del carro.
-  const float halfSensorSpanCm = (float)LATERAL_SENSOR_SPAN_MM / 20.0f;
-  float leftFromCenterCm = (float)left + halfSensorSpanCm;
-  float rightFromCenterCm = (float)right + halfSensorSpanCm;
-  float correction = (rightFromCenterCm - leftFromCenterCm) * PRE_DIRECTION_KP;
-  return (int16_t)constrain(correction,
-                            (float)-PRE_DIRECTION_MAX_DEG,
-                            (float)PRE_DIRECTION_MAX_DEG);
-}
-
-int16_t wallFollowingSteering() {
-  if (trackDirection == DIRECTION_UNKNOWN) return 0;
-
-  SensorId wallSensor = outerWallSensor();
-  if (!sensorFresh(wallSensor)) {
-    previousWallErrorValid = false;
-    return 0;
-  }
-
-  uint16_t distance = sonar[wallSensor].filteredCm;
-  if (distance > WALL_FOLLOW_MAX_CM) {
-    previousWallErrorValid = false;
-    return 0;
-  }
-
-  float error = (float)distance - (float)WALL_TARGET_CM;
-  float derivative = previousWallErrorValid ? (error - previousWallError) : 0.0f;
-  previousWallError = error;
-  previousWallErrorValid = true;
-
-  // La pared exterior esta al lado opuesto del sentido de giro.
-  float command = -(float)trackDirection * (WALL_KP * error + WALL_KD * derivative);
-  return (int16_t)constrain(command,
-                            (float)-WALL_MAX_STEERING_DEG,
-                            (float)WALL_MAX_STEERING_DEG);
-}
-
-uint16_t closestFrontDistance() {
-  uint16_t raw = sonar[SENSOR_FRONT].rawCm;
-  uint16_t filtered = sonar[SENSOR_FRONT].filteredCm;
-  return (raw < filtered) ? raw : filtered;
-}
-
-bool frontTurnConfirmed() {
-  return sensorFresh(SENSOR_FRONT) &&
-         frontCloseStreak >= FRONT_CONFIRM_SAMPLES;
-}
-
-bool updateCornerRearm() {
-  if (nextCornerArmed) return true;
-
-  if ((uint32_t)(millis() - lastTurnCompletedMs) < MIN_CORNER_INTERVAL_MS) {
-    return false;
-  }
-
-  // Se rearma solo despues de abandonar la abertura y recuperar las dos
-  // paredes laterales. El frontal no bloquea la siguiente esquina.
-  bool corridorRecovered = sensorFresh(SENSOR_LEFT) &&
-                           sensorFresh(SENSOR_RIGHT) &&
-                           sonar[SENSOR_LEFT].wallSeen &&
-                           sonar[SENSOR_RIGHT].wallSeen;
-  if (corridorRecovered) {
-    nextCornerArmed = true;
-    frontCloseStreak = 0;
-    if (SERIAL_DEBUG) {
-      Serial.println(F("EVENTO | Siguiente esquina armada por paredes laterales"));
+  if (!isFront) {
+    reading.openHits = (cm > SIDE_TURN_TRIGGER_CM)
+        ? (uint8_t)min(255, reading.openHits + 1) : 0;
+    const uint16_t wallLimit = (&reading == &sonarLeft)
+        ? LEFT_WALL_REACQUIRED_CM : RIGHT_WALL_REACQUIRED_CM;
+    reading.wallHits = (cm >= MIN_USABLE_CM && cm <= wallLimit)
+        ? (uint8_t)min(255, reading.wallHits + 1) : 0;
+  } else {
+    bool countWindow = (state == STATE_STRAIGHT && cornerArmed) ||
+                       state == STATE_TURN;
+    if (countWindow && cm <= FRONT_COUNT_CM) {
+      frontCountHits = (uint8_t)min(255, frontCountHits + 1);
+      if (frontCountHits >= FRONT_COUNT_CONFIRM_READS)
+        frontCornerSeen = true;
+    } else if (!frontCornerSeen) {
+      frontCountHits = 0;
     }
   }
-
-  return nextCornerArmed;
 }
 
-void beginTurn();
-
-void resetSideEdgeEvidence() {
-  sonar[SENSOR_LEFT].wallStreak = 0;
-  sonar[SENSOR_LEFT].openStreak = 0;
-  sonar[SENSOR_LEFT].wallSeen = false;
-  sonar[SENSOR_RIGHT].wallStreak = 0;
-  sonar[SENSOR_RIGHT].openStreak = 0;
-  sonar[SENSOR_RIGHT].wallSeen = false;
-}
-
-TrackDirection immediateOpeningDirection() {
-  bool leftOpened = sensorFresh(SENSOR_LEFT) &&
-                    sonar[SENSOR_LEFT].wallSeen &&
-                    sonar[SENSOR_LEFT].openStreak >= OPEN_CONFIRM_SAMPLES;
-  bool rightOpened = sensorFresh(SENSOR_RIGHT) &&
-                     sonar[SENSOR_RIGHT].wallSeen &&
-                     sonar[SENSOR_RIGHT].openStreak >= OPEN_CONFIRM_SAMPLES;
-
-  // Cada sensor trabaja de forma independiente: el izquierdo abre giro a la
-  // izquierda y el derecho abre giro a la derecha. wallSeen obliga a que antes
-  // haya existido pared, evitando decidir solo porque el carro arranco pegado
-  // al lado contrario.
-  if (leftOpened == rightOpened) return DIRECTION_UNKNOWN;
-  return leftOpened ? DIRECTION_LEFT : DIRECTION_RIGHT;
-}
-
-bool tryImmediateOpeningTurn() {
-  if (!nextCornerArmed ||
-      (robotState != STATE_FIND_DIRECTION && robotState != STATE_CRUISE)) {
-    return false;
+SensorId nextSensorToRead() {
+  // En recta la apertura tiene prioridad absoluta: no intercalar el frontal.
+  // Cada lateral se actualiza cada dos pings.
+  if (state == STATE_STRAIGHT || state == STATE_STARTUP) {
+    SensorId id = (sensorSequenceIndex % 2 == 0) ? SENSOR_LEFT : SENSOR_RIGHT;
+    sensorSequenceIndex = (sensorSequenceIndex + 1) % 2;
+    return id;
   }
 
-  TrackDirection detected = immediateOpeningDirection();
-  if (detected == DIRECTION_UNKNOWN) return false;
+  // Durante el giro antihorario se lee solamente el sensor interior. Asi la
+  // pared nueva se detecta cada 18 ms y no cuando el robot ya esta encima.
+  // El muestreo del giro horario se deja igual porque ya funciona bien.
+  if (state == STATE_TURN && direction == DIR_LEFT)
+    return SENSOR_LEFT;
 
-  // La abertura observada manda en esta esquina. Asi funciona tanto a la
-  // izquierda como a la derecha sin bloquearse al sentido de un giro anterior.
-  trackDirection = detected;
+  // Before direction is known, sample both sides equally and front sometimes.
+  static const SensorId unknownSequence[5] = {
+    SENSOR_LEFT, SENSOR_RIGHT, SENSOR_LEFT, SENSOR_RIGHT, SENSOR_FRONT
+  };
 
-  if (SERIAL_DEBUG) {
-    Serial.print(F("EVENTO | Apertura lateral; giro inmediato a "));
-    Serial.println(directionName(detected));
+  // Once known, prioritize the inside/turning side.
+  static const SensorId rightSequence[4] = {
+    SENSOR_RIGHT, SENSOR_LEFT, SENSOR_RIGHT, SENSOR_FRONT
+  };
+  static const SensorId leftSequence[4] = {
+    SENSOR_LEFT, SENSOR_RIGHT, SENSOR_LEFT, SENSOR_FRONT
+  };
+
+  if (direction == DIR_UNKNOWN) {
+    SensorId id = unknownSequence[sensorSequenceIndex % 5];
+    sensorSequenceIndex = (sensorSequenceIndex + 1) % 5;
+    return id;
   }
 
-  changeState(STATE_CONFIRM_SIDES);
-  beginTurn();
-  return true;
+  const SensorId *sequence = (direction == DIR_RIGHT)
+      ? rightSequence : leftSequence;
+  SensorId id = sequence[sensorSequenceIndex % 4];
+  sensorSequenceIndex = (sensorSequenceIndex + 1) % 4;
+  return id;
 }
 
-void beginSideConfirmation() {
-  if (robotState != STATE_FIND_DIRECTION && robotState != STATE_CRUISE) return;
+void updateOneSonar(unsigned long now) {
+  if ((long)(now - nextPingAt) < 0) return;
+  nextPingAt = now + PING_GAP_MS;
 
-  frontCloseStreak = 0;
-  decisionLeftOpenStreak = 0;
-  decisionRightOpenStreak = 0;
-  decisionLeftWallStreak = 0;
-  decisionRightWallStreak = 0;
-  decisionLeftStartSequence = sonar[SENSOR_LEFT].sequence;
-  decisionRightStartSequence = sonar[SENSOR_RIGHT].sequence;
-
-  changeState(STATE_CONFIRM_SIDES);
-  setSteeringOffset(0);
-  setMotorTarget(DECISION_PWM);
-
-  if (SERIAL_DEBUG) {
-    Serial.println(F("EVENTO | F<=100 confirmado; capturando lados NUEVOS"));
+  switch (nextSensorToRead()) {
+    case SENSOR_LEFT:
+      updateReading(sonarLeft,
+          readUltrasonicCm(PIN_LEFT_TRIG, PIN_LEFT_ECHO), false);
+      leftSensorSampled = true;
+      break;
+    case SENSOR_RIGHT:
+      updateReading(sonarRight,
+          readUltrasonicCm(PIN_RIGHT_TRIG, PIN_RIGHT_ECHO), false);
+      rightSensorSampled = true;
+      break;
+    case SENSOR_FRONT:
+      updateReading(sonarFront,
+          readUltrasonicCm(PIN_FRONT_TRIG, PIN_FRONT_ECHO), true);
+      break;
   }
 }
 
-void updateOneDecisionSide(SensorId id, uint32_t &lastSequence,
-                           uint8_t &openStreak, uint8_t &wallStreak) {
-  if (!sensorFresh(id) || sonar[id].sequence == lastSequence) return;
-  lastSequence = sonar[id].sequence;
-
-  uint16_t distance = sonar[id].rawCm;
-  if (distance >= SIDE_OPEN_CM) {
-    openStreak = saturatingIncrement(openStreak);
-    wallStreak = 0;
-  } else if (distance <= WALL_SEEN_MAX_CM) {
-    wallStreak = saturatingIncrement(wallStreak);
-    openStreak = 0;
-  } else {
-    // Zona ambigua 79..109 cm: no confirma ni pared ni abertura.
-    openStreak = 0;
-    wallStreak = 0;
-  }
+SonarReading &turnSideReading() {
+  return (direction == DIR_LEFT) ? sonarLeft : sonarRight;
 }
 
-TrackDirection confirmedSideDirection() {
-  bool turnLeft = decisionLeftOpenStreak >= OPEN_CONFIRM_SAMPLES &&
-                  decisionRightWallStreak >= SIDE_WALL_CONFIRM_SAMPLES;
-  bool turnRight = decisionRightOpenStreak >= OPEN_CONFIRM_SAMPLES &&
-                   decisionLeftWallStreak >= SIDE_WALL_CONFIRM_SAMPLES;
-
-  if (turnLeft == turnRight) return DIRECTION_UNKNOWN;
-  return turnLeft ? DIRECTION_LEFT : DIRECTION_RIGHT;
+// ============================================================================
+// 9. DECISION AND STEERING LOGIC
+// ============================================================================
+bool readingFresh(const SonarReading &reading, unsigned long now,
+                  uint16_t maxAgeMs = 260) {
+  return reading.initialized && reading.rawCm >= MIN_USABLE_CM &&
+         (now - reading.updatedAt <= maxAgeMs);
 }
 
-void handleSideConfirmation() {
-  setSteeringOffset(0);
+Direction detectedOpening(unsigned long now) {
+  // Evita que el sensor izquierdo gane solo por ser el primero de la secuencia.
+  // Esta espera ocurre una unica vez al encender (aprox. 40 ms).
+  if (!leftSensorSampled || !rightSensorSampled) return DIR_UNKNOWN;
+  if (direction == DIR_UNKNOWN && now - raceStartedAt < INITIAL_TURN_GUARD_MS)
+    return DIR_UNKNOWN;
 
-  uint16_t front = closestFrontDistance();
-  setMotorTarget((sensorFresh(SENSOR_FRONT) &&
-                  front <= FRONT_DECISION_STOP_CM) ? 0 : DECISION_PWM);
+  bool leftOpen = readingFresh(sonarLeft, now) &&
+                  sonarLeft.openHits >= OPEN_CONFIRM_READS;
+  bool rightOpen = readingFresh(sonarRight, now) &&
+                   sonarRight.openHits >= OPEN_CONFIRM_READS;
 
-  updateOneDecisionSide(SENSOR_LEFT,
-                        decisionLeftStartSequence,
-                        decisionLeftOpenStreak,
-                        decisionLeftWallStreak);
-  updateOneDecisionSide(SENSOR_RIGHT,
-                        decisionRightStartSequence,
-                        decisionRightOpenStreak,
-                        decisionRightWallStreak);
+  // La primera apertura fija el sentido. Luego el sensor exterior no puede
+  // cambiarlo accidentalmente durante una recta.
+  if (direction == DIR_LEFT) return leftOpen ? DIR_LEFT : DIR_UNKNOWN;
+  if (direction == DIR_RIGHT) return rightOpen ? DIR_RIGHT : DIR_UNKNOWN;
 
-  TrackDirection detected = confirmedSideDirection();
-  if (detected != DIRECTION_UNKNOWN) {
-    trackDirection = detected;
-    if (SERIAL_DEBUG) {
-      Serial.print(F("EVENTO | Respaldo frontal confirma giro a "));
-      Serial.println(directionName(trackDirection));
-    }
-    beginTurn();
-    return;
+  if (leftOpen && !rightOpen) return DIR_LEFT;
+  if (rightOpen && !leftOpen) return DIR_RIGHT;
+  if (leftOpen && rightOpen) {
+    if (direction != DIR_UNKNOWN) return direction;
+    int16_t difference = (int16_t)sonarLeft.rawCm -
+                         (int16_t)sonarRight.rawCm;
+    if (difference >= 15) return DIR_LEFT;
+    if (difference <= -15) return DIR_RIGHT;
   }
-
-  if (sensorFresh(SENSOR_FRONT) && front <= FRONT_HARD_STOP_CM) {
-    safetyStop(F("Lados ambiguos o contradictorios en la esquina"));
-  }
+  return DIR_UNKNOWN;
 }
 
-void beginTurn() {
-  if (robotState != STATE_CONFIRM_SIDES ||
-      trackDirection == DIRECTION_UNKNOWN) return;
+void applyStraightCorrection(unsigned long now) {
+  (void)now;
+  setSteering(SERVO_CENTER_DEG);
+}
 
-  frontCloseStreak = 0;
-  turnExitStreak = 0;
-  alignmentStreak = 0;
-  nextCornerArmed = false;
-  lastProcessedFrontSequence = sonar[SENSOR_FRONT].sequence;
-  previousWallErrorValid = false;
+void beginTurn(unsigned long now) {
+  if (direction == DIR_UNKNOWN || state != STATE_STRAIGHT || !cornerArmed) return;
 
-  changeState(STATE_TURNING);
-  setTurnSteering();
+  state = STATE_TURN;
+  stateStartedAt = now;
+  cornerArmed = false;
+  turnSawOpenSide = true;
+
+  // Discard wall hits collected on the previous straight. A new wall must be
+  // acquired after the turn has genuinely begun.
+  turnSideReading().wallHits = 0;
+
   setMotorTarget(TURN_PWM);
+  if (direction == DIR_LEFT)
+    setSteering(leftServoAngle(SERVO_LEFT_DEG));
+  else
+    setSteering(rightServoAngle(SERVO_RIGHT_DEG));
 
-  if (SERIAL_DEBUG) {
-    Serial.print(F("EVENTO | Inicia giro a "));
-    Serial.println(directionName(trackDirection));
-  }
+  Serial.print(F("Corner start. Next count="));
+  Serial.println(completedCorners + 1);
 }
 
-void beginFineAlignment() {
-  alignmentStreak = 0;
-  lastAlignmentFrontSequence = sonar[SENSOR_FRONT].sequence;
-  changeState(STATE_FINE_ALIGN);
-  setFineAlignmentSteering();
+void finishTurn(unsigned long now) {
+  state = STATE_ALIGN;
+  stateStartedAt = now;
+  completedCorners++;
+  frontCornerSeen = false;
+  frontCountHits = 0;
+
   setMotorTarget(ALIGN_PWM);
+  setSteering(SERVO_CENTER_DEG);
 
-  if (SERIAL_DEBUG) {
-    Serial.println(F("EVENTO | Inicia segunda correccion del giro"));
+  Serial.print(F("Corner completed: "));
+  Serial.print(completedCorners);
+  Serial.println(F("/12"));
+  if ((completedCorners % 4) == 0) {
+    Serial.print(F("Lap completed: "));
+    Serial.println(completedCorners / 4);
   }
 }
 
-void completeTurn() {
-  completedTurns++;
-  lastTurnCompletedMs = millis();
-  turnExitStreak = 0;
-  nextCornerArmed = false;
-
-  setMotorTarget(EXIT_PWM);
-  setSteeringOffset((int16_t)-trackDirection * EXIT_COUNTERSTEER_DEG);
-  changeState(STATE_EXIT_TURN);
-
-  if (SERIAL_DEBUG) {
-    Serial.print(F("EVENTO | Esquina completada: "));
-    Serial.print(completedTurns);
-    Serial.print(F("/"));
-    Serial.print(TOTAL_TURNS);
-    Serial.print(F(" | Vueltas: "));
-    Serial.println(completedTurns / 4);
-  }
-}
-
-void updateTurnCompletion() {
-  uint32_t elapsed = millis() - stateAtMs;
-  if (elapsed < TURN_MIN_MS) return;
-
-  if (sonar[SENSOR_FRONT].sequence != lastProcessedFrontSequence) {
-    lastProcessedFrontSequence = sonar[SENSOR_FRONT].sequence;
-
-    bool frontClear = sensorFresh(SENSOR_FRONT) &&
-                      sonar[SENSOR_FRONT].filteredCm >= TURN_EXIT_FRONT_CM;
-    SensorId wallId = outerWallSensor();
-    bool wallRecovered = sensorFresh(wallId) &&
-                         sonar[wallId].filteredCm <= TURN_EXIT_WALL_MAX_CM;
-    bool bothSidesAligned = sensorFresh(SENSOR_LEFT) &&
-                            sensorFresh(SENSOR_RIGHT) &&
-                            sonar[SENSOR_LEFT].filteredCm <= TURN_EXIT_SIDE_MAX_CM &&
-                            sonar[SENSOR_RIGHT].filteredCm <= TURN_EXIT_SIDE_MAX_CM;
-
-    turnExitStreak = (frontClear && wallRecovered && bothSidesAligned)
-                     ? saturatingIncrement(turnExitStreak) : 0;
+void handleStraight(unsigned long now) {
+  Direction opening = detectedOpening(now);
+  if (cornerArmed && opening != DIR_UNKNOWN) {
+    direction = opening;
+    sensorSequenceIndex = 0;
+    beginTurn(now);
+    return;
   }
 
-  if (turnExitStreak >= TURN_EXIT_CONFIRM_SAMPLES || elapsed >= TURN_MAX_MS) {
-    if (elapsed >= TURN_MAX_MS && SERIAL_DEBUG) {
-      Serial.println(F("AVISO | Giro terminado por limite de tiempo"));
-    }
-    beginFineAlignment();
-  }
-}
+  applyStraightCorrection(now);
 
-void updateFineAlignment() {
-  uint32_t elapsed = millis() - stateAtMs;
-
-  if (sonar[SENSOR_FRONT].sequence != lastAlignmentFrontSequence) {
-    lastAlignmentFrontSequence = sonar[SENSOR_FRONT].sequence;
-
-    bool frontClear = sensorFresh(SENSOR_FRONT) &&
-                      sonar[SENSOR_FRONT].filteredCm >= ALIGN_FRONT_CLEAR_CM;
-    bool sidesShowCorridor = sensorFresh(SENSOR_LEFT) &&
-                             sensorFresh(SENSOR_RIGHT) &&
-                             sonar[SENSOR_LEFT].filteredCm <= ALIGN_SIDE_MAX_CM &&
-                             sonar[SENSOR_RIGHT].filteredCm <= ALIGN_SIDE_MAX_CM;
-
-    alignmentStreak = (frontClear && sidesShowCorridor)
-                      ? saturatingIncrement(alignmentStreak) : 0;
-  }
-
-  bool confirmed = elapsed >= ALIGN_MIN_MS &&
-                   alignmentStreak >= ALIGN_CONFIRM_SAMPLES;
-  if (confirmed || elapsed >= ALIGN_MAX_MS) {
-    if (elapsed >= ALIGN_MAX_MS && SERIAL_DEBUG) {
-      Serial.println(F("AVISO | Ajuste del giro terminado por limite de tiempo"));
-    }
-    completeTurn();
-  }
-}
-
-void handleFindDirection() {
-  uint32_t sinceBoot = millis() - bootAtMs;
-  setMotorTarget((sinceBoot < STARTUP_RAMP_MS) ? START_PWM : CRUISE_PWM);
-
-  uint16_t front = closestFrontDistance();
-  if (sensorFresh(SENSOR_FRONT) && front <= FRONT_APPROACH_CM) {
-    setMotorTarget(APPROACH_PWM);
-  }
-
-  // Mientras avanza centra el carro; la decision usa transiciones laterales,
-  // no la diferencia instantanea causada por empezar pegado a una pared.
-  setSteeringOffset(preDirectionSteering());
-
-  // Ruta principal: no espera al frontal si ya ocurrio pared -> abertura.
-  if (tryImmediateOpeningTurn()) return;
-
-  // Respaldo: si la geometria oculto la abertura lateral, decide desde F<=100.
-  if (nextCornerArmed && frontTurnConfirmed()) {
-    beginSideConfirmation();
-  }
-}
-
-void handleCruise() {
-  uint16_t front = closestFrontDistance();
-  setMotorTarget((sensorFresh(SENSOR_FRONT) && front <= FRONT_APPROACH_CM)
-                 ? APPROACH_PWM : CRUISE_PWM);
-  setSteeringOffset(wallFollowingSteering());
-
-  // Rearma al recuperar paredes laterales; no espera al sensor frontal.
-  if (!updateCornerRearm()) return;
-
-  // La abertura lateral tiene prioridad y ordena el giro inmediatamente.
-  if (tryImmediateOpeningTurn()) return;
-
-  // El frontal a 100 cm solo respalda una abertura que no pudo verse antes.
-  if (frontTurnConfirmed()) beginSideConfirmation();
-}
-
-void handleExitTurn() {
-  uint32_t elapsed = millis() - stateAtMs;
-  setMotorTarget(EXIT_PWM);
-
-  if (elapsed < EXIT_COUNTERSTEER_MS) {
-    setSteeringOffset((int16_t)-trackDirection * EXIT_COUNTERSTEER_DEG);
+  // Nunca detenerse por una lectura frontal durante la carrera.
+  if (direction == DIR_UNKNOWN) {
+    setMotorTarget(DECISION_PWM);
   } else {
-    setSteeringOffset(wallFollowingSteering());
-  }
-
-  if (elapsed < EXIT_RECOVERY_MS) return;
-
-  frontCloseStreak = 0;
-  if (completedTurns >= TOTAL_TURNS) {
-    changeState(STATE_FINAL_ADVANCE);
-    setMotorTarget(FINAL_PWM);
-  } else {
-    resetSideEdgeEvidence();
-    changeState(STATE_CRUISE);
     setMotorTarget(CRUISE_PWM);
   }
 }
 
-void handleFinalAdvance() {
-  setMotorTarget(FINAL_PWM);
-  setSteeringOffset(wallFollowingSteering());
+void handleTurn(unsigned long now) {
+  unsigned long elapsed = now - stateStartedAt;
 
-  if ((uint32_t)(millis() - stateAtMs) >= FINAL_ADVANCE_MS) {
-    setSteeringOffset(0);
-    brakeMotor();
-    changeState(STATE_STOPPED);
-    if (SERIAL_DEBUG) Serial.println(F("META | 3 vueltas completadas"));
+  if (turnSideReading().openHits >= OPEN_CONFIRM_READS)
+    turnSawOpenSide = true;
+
+  const uint16_t minTurnMs = (direction == DIR_LEFT)
+      ? MIN_LEFT_TURN_MS : MIN_RIGHT_TURN_MS;
+  const uint16_t maxTurnMs = (direction == DIR_LEFT)
+      ? MAX_LEFT_TURN_MS : MAX_RIGHT_TURN_MS;
+  const uint8_t wallConfirmReads = (direction == DIR_LEFT)
+      ? LEFT_WALL_CONFIRM_READS : RIGHT_WALL_CONFIRM_READS;
+
+  bool newWallConfirmed = turnSideReading().wallHits >= wallConfirmReads;
+  if ((elapsed >= minTurnMs && turnSawOpenSide && newWallConfirmed) ||
+      elapsed >= maxTurnMs) {
+    finishTurn(now);
   }
 }
 
-void updateNavigation() {
-  uint32_t now = millis();
-  if ((uint32_t)(now - lastControlMs) < CONTROL_INTERVAL_MS) return;
-  lastControlMs = now;
-
-  switch (robotState) {
-    case STATE_FIND_DIRECTION:
-      handleFindDirection();
+void updateStateMachine(unsigned long now) {
+  switch (state) {
+    case STATE_STARTUP:
+      setSteering(SERVO_CENTER_DEG);
+      state = STATE_STRAIGHT;
+      stateStartedAt = now;
+      setMotorTarget(START_PWM);
       break;
 
-    case STATE_CRUISE:
-      handleCruise();
+    case STATE_STRAIGHT:
+      handleStraight(now);
       break;
 
-    case STATE_CONFIRM_SIDES:
-      handleSideConfirmation();
+    case STATE_TURN:
+      handleTurn(now);
       break;
 
-    case STATE_TURNING:
-      setMotorTarget(TURN_PWM);
-      setTurnSteering();
-      updateTurnCompletion();
+    case STATE_ALIGN:
+      if (now - stateStartedAt >= ALIGN_MS) {
+        state = STATE_EXIT;
+        stateStartedAt = now;
+        setSteering(SERVO_CENTER_DEG);
+        setMotorTarget(EXIT_PWM);
+      }
       break;
 
-    case STATE_FINE_ALIGN:
-      setMotorTarget(ALIGN_PWM);
-      setFineAlignmentSteering();
-      updateFineAlignment();
+    case STATE_EXIT:
+      if (now - stateStartedAt >= EXIT_MS) {
+        lastCornerCompletedAt = now;
+        turnSideReading().wallHits = 0;
+
+        if (completedCorners >= CORNERS_TO_FINISH) {
+          state = STATE_FINAL_RUN;
+          stateStartedAt = now;
+          setSteering(SERVO_CENTER_DEG);
+          setMotorTarget(FINAL_PWM);
+        } else {
+          // Rearme directo al terminar la salida; no exige pared ni confirmacion.
+          cornerArmed = true;
+          sonarLeft.openHits = 0;
+          sonarRight.openHits = 0;
+          state = STATE_STRAIGHT;
+          stateStartedAt = now;
+          setMotorTarget(CRUISE_PWM);
+        }
+      }
       break;
 
-    case STATE_EXIT_TURN:
-      handleExitTurn();
+    case STATE_FINAL_RUN:
+      // Keep a small centering correction during the final straight.
+      applyStraightCorrection(now);
+      if (now - stateStartedAt >= FINAL_RUN_MS) {
+        state = STATE_FINAL_BRAKE;
+        stateStartedAt = now;
+        setSteering(SERVO_CENTER_DEG);
+        motorActiveBrake();
+      }
       break;
 
-    case STATE_FINAL_ADVANCE:
-      handleFinalAdvance();
+    case STATE_FINAL_BRAKE:
+      if (now - stateStartedAt >= FINAL_BRAKE_MS) {
+        motorCoastStop();
+        state = STATE_STOPPED;
+        stateStartedAt = now;
+        Serial.println(F("FINISHED: 12 corners / 3 laps"));
+      }
       break;
 
     case STATE_STOPPED:
-    case STATE_SAFETY_STOP:
-      // Estados terminales. Solo se reinician apagando y encendiendo el switch.
+      setSteering(SERVO_CENTER_DEG);
+      motorCoastStop();
       break;
   }
 }
 
-// -----------------------------------------------------------------------------
-// DIAGNOSTICO
-// -----------------------------------------------------------------------------
-
-void printDebug() {
-  if (!SERIAL_DEBUG) return;
-  uint32_t now = millis();
-  if ((uint32_t)(now - lastDebugMs) < DEBUG_INTERVAL_MS) return;
-  lastDebugMs = now;
-
-  Serial.print(F("Estado="));
-  Serial.print(stateName(robotState));
-  Serial.print(F(" | Sentido="));
-  Serial.print(directionName(trackDirection));
-  Serial.print(F(" | F="));
-  Serial.print(sonar[SENSOR_FRONT].rawCm);
-  Serial.print('/');
-  Serial.print(sonar[SENSOR_FRONT].filteredCm);
-  Serial.print(F(" | L="));
-  Serial.print(sonar[SENSOR_LEFT].rawCm);
-  Serial.print('/');
-  Serial.print(sonar[SENSOR_LEFT].filteredCm);
-  Serial.print(F(" | R="));
-  Serial.print(sonar[SENSOR_RIGHT].rawCm);
-  Serial.print('/');
-  Serial.print(sonar[SENSOR_RIGHT].filteredCm);
-  Serial.print(F(" | ConfL="));
-  Serial.print(decisionLeftOpenStreak);
-  Serial.print('/');
-  Serial.print(decisionLeftWallStreak);
-  Serial.print(F(" | ConfR="));
-  Serial.print(decisionRightOpenStreak);
-  Serial.print('/');
-  Serial.print(decisionRightWallStreak);
-  Serial.print(F(" | Servo="));
-  Serial.print(lastServoAngle);
-  Serial.print(F(" | PWM="));
-  Serial.print(currentMotorPwm);
-  Serial.print('/');
-  Serial.print(targetMotorPwm);
-  Serial.print(F(" | Armado="));
-  Serial.print(nextCornerArmed ? F("SI") : F("NO"));
-  Serial.print(F(" | Esquinas="));
-  Serial.print(completedTurns);
-  Serial.print('/');
-  Serial.println(TOTAL_TURNS);
+// ============================================================================
+// 10. SERIAL DIAGNOSTICS
+// ============================================================================
+const __FlashStringHelper *stateName(DriveState value) {
+  switch (value) {
+    case STATE_STARTUP: return F("STARTUP");
+    case STATE_STRAIGHT: return F("STRAIGHT");
+    case STATE_TURN: return F("TURN");
+    case STATE_ALIGN: return F("ALIGN");
+    case STATE_EXIT: return F("EXIT");
+    case STATE_FINAL_RUN: return F("FINAL_RUN");
+    case STATE_FINAL_BRAKE: return F("FINAL_BRAKE");
+    case STATE_STOPPED: return F("STOPPED");
+  }
+  return F("?");
 }
 
-// -----------------------------------------------------------------------------
-// SETUP Y LOOP
-// -----------------------------------------------------------------------------
+void printDebug(unsigned long now) {
+  if (now - lastDebugAt < DEBUG_INTERVAL_MS) return;
+  lastDebugAt = now;
 
+  Serial.print(F("State=")); Serial.print(stateName(state));
+  Serial.print(F(" Dir="));
+  if (direction == DIR_LEFT) Serial.print(F("L"));
+  else if (direction == DIR_RIGHT) Serial.print(F("R"));
+  else Serial.print(F("?"));
+  Serial.print(F(" Corners=")); Serial.print(completedCorners);
+  Serial.print(F(" Laps=")); Serial.print(completedCorners / 4);
+  Serial.print(F(" L=")); Serial.print(sonarLeft.rawCm);
+  Serial.print(F(" R=")); Serial.print(sonarRight.rawCm);
+  Serial.print(F(" F=")); Serial.print(sonarFront.rawCm);
+  Serial.print(F(" PWM=")); Serial.print(motorCurrentPwm);
+  Serial.print(F(" Target=")); Serial.print(motorTargetPwm);
+  Serial.print(F(" Servo=")); Serial.print(lastServoCommand);
+  Serial.print(F(" FrontSeen=")); Serial.print(frontCornerSeen ? F("YES") : F("NO"));
+  Serial.print(F(" Armed=")); Serial.println(cornerArmed ? F("YES") : F("NO"));
+}
+
+// ============================================================================
+// 11. ARDUINO ENTRY POINTS
+// ============================================================================
 void setup() {
   Serial.begin(115200);
 
   pinMode(PIN_ENA, OUTPUT);
   pinMode(PIN_IN1, OUTPUT);
   pinMode(PIN_IN2, OUTPUT);
-  applyForwardPwm(0);
 
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-    pinMode(sonar[i].trigPin, OUTPUT);
-    pinMode(sonar[i].echoPin, INPUT);
-    digitalWrite(sonar[i].trigPin, LOW);
-  }
+  pinMode(PIN_FRONT_TRIG, OUTPUT);
+  pinMode(PIN_FRONT_ECHO, INPUT);
+  pinMode(PIN_RIGHT_TRIG, OUTPUT);
+  pinMode(PIN_RIGHT_ECHO, INPUT);
+  pinMode(PIN_LEFT_TRIG, OUTPUT);
+  pinMode(PIN_LEFT_ECHO, INPUT);
 
-  steeringServo.attach(PIN_SERVO, 500, 2500);
-  setSteeringOffset(0);
+  digitalWrite(PIN_FRONT_TRIG, LOW);
+  digitalWrite(PIN_RIGHT_TRIG, LOW);
+  digitalWrite(PIN_LEFT_TRIG, LOW);
 
-  bootAtMs = millis();
-  stateAtMs = bootAtMs;
-  lastMotorRampMs = bootAtMs;
-  nextPingAtUs = micros();
-  nextCornerArmed = true; // La primera esquina queda habilitada al arrancar.
+  steering.attach(PIN_SERVO);
+  setSteering(SERVO_CENTER_DEG);
 
-  // Arranque inmediato: el motor comienza una rampa suave sin esperar boton.
-  setMotorTarget(START_PWM);
+  // Avance inmediato al encender: no espera y no arranca desde PWM cero.
+  enableForwardDirection();
+  motorCurrentPwm = START_PWM;
+  motorTargetPwm = START_PWM;
+  analogWrite(PIN_ENA, START_PWM);
 
-  if (SERIAL_DEBUG) {
-    Serial.println(F("WRO OPEN | Inicio automatico"));
-    Serial.println(F("Mega 2560 | 3x HC-SR04 | L298N | Servo Ackermann"));
-    Serial.println(F("Formato sonar: lectura_cruda/mediana_filtrada en cm"));
-    Serial.println(F("Giro: 1x pared->abertura; cada lateral manda su sentido"));
-    Serial.println(F("Maniobra: giro anterior + ajuste + contravolante"));
-  }
+  unsigned long now = millis();
+  raceStartedAt = now;
+  state = STATE_STRAIGHT;
+  stateStartedAt = now;
+  nextPingAt = now;
+  lastPwmRampAt = now;
+
+  Serial.println(F("Olibot high-speed profile - immediate start"));
+  Serial.print(F("PWM straight=")); Serial.print(CRUISE_PWM);
+  Serial.print(F(" turn=")); Serial.print(TURN_PWM);
+  Serial.print(F(" align=")); Serial.print(ALIGN_PWM);
+  Serial.print(F(" exit=")); Serial.println(EXIT_PWM);
 }
 
 void loop() {
-  updateSonarScanner();
-  updateNavigation();
-  updateMotorRamp();
-  printDebug();
+  unsigned long now = millis();
+
+  updateOneSonar(now);
+  updateStateMachine(now);
+
+  // Braking writes ENA directly; ramping must be suspended in brake/stop.
+  if (state != STATE_FINAL_BRAKE && state != STATE_STOPPED)
+    updateMotorRamp(now);
+
+  printDebug(now);
 }

@@ -27,7 +27,7 @@ Reason:
 Trade-off:
 
 - No gyroscope or encoder is used, so the robot still depends on ultrasonic thresholds and timing.
-- Three HC-SR04 sensors require careful scheduling to avoid blocking control or cross-talk.
+- Three HC-SR04 sensors require careful sequencing and short timeouts to control latency and cross-talk.
 - The final pin map must be checked physically against the robot before judging it as verified wiring.
 
 ## Decision: Use L298N For The First Motor-Control Prototype

@@ -49,4 +49,6 @@
 - Added the team-provided Open Challenge YouTube Short link to `video/video.md`.
 - Added current hardware close-up photos for the Arduino Mega, L298N, HuskyLens, front ultrasonic mount, and DC motor wiring.
 - Marked the driving video link as provided while keeping the WRO 30-second autonomous-driving duration check explicit.
+- Replaced the Open Challenge firmware with the team-provided final-final Olibot high-speed profile while preserving the confirmed Arduino Mega pin map.
+- Updated software, strategy, mobility, sensor, risk, and run-procedure documentation to match the final-final firmware states, constants, immediate start, final run, and active brake behavior.
 

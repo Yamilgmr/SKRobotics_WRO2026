@@ -43,7 +43,7 @@ Our Open Challenge hypothesis is that the robot can complete laps faster if it k
 
 - Three ultrasonic sensors are installed: front, right, and left.
 - No gyroscope or encoder is used, so turn angle and distance are not directly measured.
-- No start button is used; the current code begins after startup warmup.
+- No start button is used; the current code starts moving immediately after power-on.
 - The current code counts 12 corners, advances on the final straight, and stops automatically.
 - HuskyLens is installed and manually tested, but Arduino communication and red/green code are not implemented yet.
 - Parking strategy is selected conceptually, but not implemented in code yet.

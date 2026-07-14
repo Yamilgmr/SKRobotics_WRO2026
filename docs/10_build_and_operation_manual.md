@@ -38,7 +38,6 @@
 ## Open Challenge Run Procedure
 
 1. Place robot in the start section.
-2. Turn power on.
-3. Wait a moment after power-on for sensor warmup.
-4. Observe side-opening detection, left/right turn behavior, corner counting, and final stop.
+2. Turn power on only when the team is ready for immediate movement.
+3. Observe side-opening detection, left/right turn behavior, corner counting, final run, active brake, and final stop.
 5. Record result in the test log.

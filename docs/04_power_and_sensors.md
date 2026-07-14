@@ -30,7 +30,7 @@ Because the Arduino Mega uses 5 V logic, the HC-SR04 echo signals are compatible
 
 | Sensor | Position | Use |
 | --- | --- | --- |
-| Front ultrasonic | Front, facing forward | Detect upcoming walls and turn timing |
+| Front ultrasonic | Front, facing forward | Secondary corner cue and diagnostic distance reading |
 | Right ultrasonic | Right side, facing right | Detect right-side openings and support lateral correction |
 | Left ultrasonic | Left side, facing left | Detect left-side openings and support lateral correction |
 | HuskyLens | Front vision mount | Planned red/green sign and parking-area detection |
@@ -58,7 +58,7 @@ The current wiring diagram image is stored at `schemes/electrical_wiring_diagram
 
 ## Sensor Placement Reasoning
 
-The front ultrasonic sensor supports safety, fallback corner capture, and turn-exit validation. The right and left ultrasonic sensors detect wall-to-opening transitions so the robot can start turns before the front wall becomes dangerous. The side sensors are also used for lateral correction and post-turn recovery.
+The right and left ultrasonic sensors detect wall-to-opening transitions so the robot can start turns early. The front ultrasonic sensor is used as secondary corner evidence and a diagnostic reading, while the current race logic does not stop the robot from a single front reading.
 
 - Ultrasonic readings can fail on angled or soft surfaces.
 - Without a gyroscope or encoder, turns depend on time and ultrasonic exit conditions.
@@ -71,7 +71,7 @@ The front ultrasonic sensor supports safety, fallback corner capture, and turn-e
 3. Compare average error and outlier frequency.
 4. Tune valid distance limits and filtering.
 5. Repeat after final sensor mounting, because angle and height affect readings.
-6. Test `SIDE_OPEN_CM`, `FRONT_TURN_CM`, `WALL_TARGET_CM`, and turn timing on the real track.
+6. Test `SIDE_TURN_TRIGGER_CM`, `FRONT_COUNT_CM`, wall reacquisition thresholds, and left/right turn timing on the real track.
 
 ## Obstacle Sensor
 

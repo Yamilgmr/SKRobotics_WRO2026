@@ -2,7 +2,7 @@
 
 ## Goal
 
-Complete three laps without touching walls and stop after the final lap. The current code is the team's final Open Challenge version for now. It counts 12 corners, advances through the final straight, and stops.
+Complete three laps without touching walls and stop after the final lap. The current code is the team's final Open Challenge version for now. It counts 12 corners, runs a calibrated final straight, actively brakes, and stops.
 
 ## Why Continuous Turns
 
@@ -10,16 +10,16 @@ A stop-and-turn approach is simpler, but it costs time and can make the robot un
 
 ## Current Algorithm
 
-1. Read right, left, and front ultrasonic sensors using a non-blocking scheduler.
-2. Prioritize side sensors so wall-to-opening transitions are detected early.
+1. Read left, right, and front ultrasonic sensors with timed `pulseIn()` calls.
+2. Prioritize side sensors in straight sections so wall-to-opening transitions are detected early.
 3. Detect the track direction from the first reliable side opening.
-4. Drive forward while checking side openings, front distance, and safety thresholds.
+4. Drive forward while checking side openings and the secondary front corner cue.
 5. Start a turn when a side sensor changes from wall to opening.
-6. Use the front sensor as a fallback if the side opening was not detected in time.
-7. Execute the turn sequence: entry steering, main turn, fine alignment, countersteer, and recovery.
+6. Hold the calibrated fixed steering angle until the new wall is reacquired or the turn timeout is reached.
+7. Center the wheels, exit the corner, and rearm the next turn.
 8. Count completed corners.
-9. After corner 12, advance on the starting straight for `FINAL_ADVANCE_MS`.
-10. Stop the robot.
+9. After corner 12, run the starting straight for `FINAL_RUN_MS`.
+10. Apply active braking for `FINAL_BRAKE_MS`, then stop the robot.
 
 ## Tuning Method
 
@@ -27,13 +27,13 @@ Start with slow tests. Change one variable at a time:
 
 | Test | Variable | Expected Observation |
 | --- | --- | --- |
-| Wall target | `WALL_TARGET_CM` | Higher value drives farther from the wall |
-| Side opening detection | `SIDE_OPEN_CM` | Higher value requires more open space before a side-triggered turn |
-| Front fallback | `FRONT_TURN_CM` | Higher value captures turns earlier from the front sensor |
-| Turn exit | `TURN_EXIT_FRONT_CM`, `TURN_EXIT_WALL_MAX_CM`, `TURN_EXIT_SIDE_MAX_CM` | Controls when the robot accepts that the new straight is visible |
-| Turn duration | `TURN_MIN_MS`, `TURN_MAX_MS` | Longer value turns more |
-| Alignment | `ALIGN_MIN_MS`, `ALIGN_MAX_MS` | Controls second correction timing |
-| Final stop | `FINAL_ADVANCE_MS` | Controls how far the robot drives after corner 12 |
+| Side opening detection | `SIDE_TURN_TRIGGER_CM` | Higher value requires more open space before a side-triggered turn |
+| Front corner cue | `FRONT_COUNT_CM` | Higher value counts front corner evidence earlier |
+| Left turn duration | `MIN_LEFT_TURN_MS`, `MAX_LEFT_TURN_MS` | Controls left turn minimum and maximum duration |
+| Right turn duration | `MIN_RIGHT_TURN_MS`, `MAX_RIGHT_TURN_MS` | Controls right turn minimum and maximum duration |
+| Wall reacquisition | `LEFT_WALL_REACQUIRED_CM`, `RIGHT_WALL_REACQUIRED_CM` | Controls when each turn accepts that the new wall was found |
+| Alignment and exit | `ALIGN_MS`, `EXIT_MS` | Controls centered-wheel recovery after each turn |
+| Final stop | `FINAL_RUN_MS`, `FINAL_BRAKE_MS` | Controls final straight distance and braking time after corner 12 |
 | Speed | `CRUISE_PWM`, `TURN_PWM`, `ALIGN_PWM`, `FINAL_PWM` | Higher speed needs earlier steering and stronger recovery |
 
 ## Success Metrics
