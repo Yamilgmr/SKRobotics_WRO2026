@@ -2,7 +2,7 @@
 
 This folder stores calibration data and test measurements.
 
-Current status: pending real measured data from the physical robot.
+Current status: initial real Serial Monitor evidence is stored in `assets/test_evidence/`; numeric calibration tables are still pending real measured data from the physical robot.
 
 Planned data files:
 

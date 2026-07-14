@@ -207,6 +207,7 @@ Priority tests:
 - [x] Initial software architecture.
 - [x] Open Challenge starter code.
 - [x] Calibration sketches.
+- [x] Initial real Open Challenge serial test evidence.
 - [ ] Real measured calibration and test data.
 - [x] Engineering journal templates.
 - [x] Final vehicle photos from all required angles.

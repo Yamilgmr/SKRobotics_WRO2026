@@ -13,9 +13,9 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | Team photos | Formal, individual, and working-session photos are stored in `t-photos/` | Done |
 | Demonstration videos | Link table in `video/video.md` | Pending real videos |
 | Wiring and electromechanical diagrams | SVG wiring diagram and Markdown diagrams in `schemes/` | Diagram added, physical verification pending |
-| Calibration and test data | Templates exist in `data/calibration/` | Pending real measured data |
+| Calibration and test data | Serial Monitor test evidence is stored in `assets/test_evidence/`; numeric calibration tables are in `data/calibration/` | Initial evidence added, measured tables pending |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
-| Engineering process evidence | Decision log and test templates | Started |
+| Engineering process evidence | Decision log, test templates, and real Serial Monitor evidence | Started |
 | At least three meaningful commits | Repository history contains multiple meaningful commits | Done |
 
 ## Rubric Alignment

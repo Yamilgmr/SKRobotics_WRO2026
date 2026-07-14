@@ -31,6 +31,7 @@
 - Added the current electrical wiring diagram image in `schemes/electrical_wiring_diagram.svg`.
 - Updated Obstacle Challenge planning to use HuskyLens as the selected red/green perception sensor.
 - Marked calibration and test data as pending real measured values, not invented values.
+- Refreshed the six final vehicle photos and added real Open Challenge Serial Monitor test evidence.
 - Removed active documentation references to gyroscope, start button, status LED, encoder, and left ultrasonic sensor.
 - Documented that lap counting and automatic final stop are still missing from the current movement baseline.
 

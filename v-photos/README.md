@@ -11,5 +11,5 @@ Final vehicle photo set:
 - [Top view](top.jpg)
 - [Bottom view](bottom.jpg)
 
-These photos show the final current vehicle build used for the active Arduino Mega baseline. New photos should replace this set whenever the chassis, wiring, sensor mounts, motor driver wiring, or battery mounting changes significantly.
+These photos show the final current vehicle build used for the active Arduino Mega baseline. The set was refreshed on 2026-07-13 with the latest vehicle build photos. New photos should replace this set whenever the chassis, wiring, sensor mounts, motor driver wiring, or battery mounting changes significantly.
 
