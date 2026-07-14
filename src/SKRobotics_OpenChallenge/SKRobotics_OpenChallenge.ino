@@ -1,27 +1,3 @@
-/*
-  WRO Future Engineers - Open Challenge
-  Arduino Mega 2560 + L298N + servo Ackermann + 3x HC-SR04
-
-  Adaptacion original basada en la arquitectura de navegacion de VizDrive VD26:
-  https://github.com/vd-wro/VD26
-  Video de referencia:
-  https://www.youtube.com/watch?v=nUoTaL3pmQw
-
-  Diferencias importantes frente al proyecto de referencia:
-  - Arranque automatico al encender; no usa boton de inicio.
-  - No usa MPU6050, encoder ni sensor de color.
-  - Los laterales tienen prioridad: una lectura pared -> abertura inicia el giro.
-  - Cada lateral ordena independientemente su sentido de giro.
-  - Conserva la maniobra estable: giro, segunda correccion y contravolante.
-  - El frontal es secundario: valida salida, seguridad y conteo de esquinas.
-  - Cuenta 12 esquinas (3 vueltas) y se detiene en la recta inicial.
-  - Lectura de ultrasonidos por turnos, sin pulseIn() y sin bloquear el control.
-
-  IMPORTANTE:
-  Ningun codigo puede quedar calibrado de forma definitiva sin probar el chasis.
-  Ajusta primero el bloque CALIBRACION FISICA. Cambia una sola constante por vez.
-*/
-
 #include <Servo.h>
 
 // -----------------------------------------------------------------------------
