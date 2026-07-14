@@ -122,6 +122,11 @@ This repository follows the public WRO Future Engineers template structure and e
 - [Motor driver test](src/calibration/motor_driver_test/motor_driver_test.ino)
 - [Source code notes](src/README.md)
 
+## Current Visual Evidence
+
+- [Open Challenge YouTube Short](https://youtube.com/shorts/AXeQFjmq5FQ?feature=share) - team-provided autonomous driving clip. The team should confirm that the autonomous-driving portion is at least 30 seconds before treating it as the final WRO video submission.
+- [Hardware close-up photos](assets/hardware_photos/README.md) - current Arduino Mega, L298N, HuskyLens, ultrasonic mount, and DC motor wiring evidence.
+
 ## Firmware Philosophy
 
 The starter firmware is designed around a finite state machine. That makes the robot behavior easier to explain, test, and improve. The Open Challenge sketch separates these responsibilities:
@@ -219,7 +224,7 @@ Priority tests:
 - [x] Electrical wiring diagram image.
 - [ ] Physical wire-by-wire verification.
 - [x] Team photo files stored directly in `t-photos/`.
-- [ ] Driving video links.
+- [x] Driving video link provided.
 - [ ] CAD or mechanical drawings.
 - [ ] L298N wiring and PWM test data.
 - [x] Turn counting and automatic final stop.

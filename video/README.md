@@ -11,3 +11,5 @@ Recommended videos:
 
 Use `video.md` for final public links.
 
+The current Open Challenge YouTube Short is recorded in `video.md`. Before final documentation submission, confirm that the autonomous-driving portion is at least 30 seconds, as required by the WRO 2026 rules.
+

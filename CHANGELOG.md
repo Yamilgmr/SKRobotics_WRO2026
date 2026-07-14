@@ -44,3 +44,9 @@
 - Selected the parking concept: use HuskyLens to detect the parking area, drive until both parking walls leave the camera view, then reverse and align into the parking box.
 - Updated documentation, calibration notes, risk tracking, and wiring references to match the current robot.
 
+## 2026-07-14
+
+- Added the team-provided Open Challenge YouTube Short link to `video/video.md`.
+- Added current hardware close-up photos for the Arduino Mega, L298N, HuskyLens, front ultrasonic mount, and DC motor wiring.
+- Marked the driving video link as provided while keeping the WRO 30-second autonomous-driving duration check explicit.
+

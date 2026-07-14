@@ -11,7 +11,7 @@ This document maps the repository to the WRO 2026 Future Engineers documentation
 | Source code for programmed components | Current Open Challenge Arduino Mega code plus obstacle placeholder in `src/` | Open Challenge current-final, obstacle pending |
 | Vehicle photos | Six final current vehicle views are stored in `v-photos/` | Done |
 | Team photos | Formal, individual, and working-session photos are stored in `t-photos/` | Done |
-| Demonstration videos | Link table in `video/video.md` | Pending real videos |
+| Demonstration videos | Link table in `video/video.md` with current Open Challenge YouTube Short | Link added, verify 30-second autonomous-driving requirement |
 | Wiring and electromechanical diagrams | SVG wiring diagram and Markdown diagrams in `schemes/` | Diagram added, physical verification pending |
 | Calibration and test data | Serial Monitor test evidence is stored in `assets/test_evidence/`; numeric calibration tables are in `data/calibration/` | Initial evidence added, measured tables pending |
 | CAD or fabrication files | Placeholder structure in `models/` | Pending real CAD |
