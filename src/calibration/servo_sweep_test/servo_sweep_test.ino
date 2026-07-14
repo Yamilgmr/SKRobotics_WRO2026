@@ -9,8 +9,8 @@
 static const uint8_t PIN_SERVO = 9;
 
 static const int SERVO_CENTER = 90;
-static const int SERVO_LEFT_LIMIT = 25;
-static const int SERVO_RIGHT_LIMIT = 130;
+static const int SERVO_LEFT_LIMIT = 35;
+static const int SERVO_RIGHT_LIMIT = 110;
 
 Servo steeringServo;
 

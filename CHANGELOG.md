@@ -24,14 +24,23 @@
 
 ## 2026-07-06
 
-- Updated the active Open Challenge code to the final two-ultrasonic Arduino Mega version provided by the team.
-- Updated the pin map to servo D9, L298N D5/D6/D7, front ultrasonic D22/D23, and right ultrasonic D24/D25.
+- Updated the then-active Open Challenge code to the final two-ultrasonic Arduino Mega version provided by the team at that time.
+- Updated the then-active pin map to servo D9, L298N D5/D6/D7, front ultrasonic D22/D23, and right ultrasonic D24/D25.
 - Replaced the six required vehicle photos in `v-photos/` with the final current vehicle views.
 - Added formal, individual, and working-session team photos in `t-photos/`.
 - Added the current electrical wiring diagram image in `schemes/electrical_wiring_diagram.svg`.
 - Updated Obstacle Challenge planning to use HuskyLens as the selected red/green perception sensor.
 - Marked calibration and test data as pending real measured values, not invented values.
 - Refreshed the six final vehicle photos and added real Open Challenge Serial Monitor test evidence.
-- Removed active documentation references to gyroscope, start button, status LED, encoder, and left ultrasonic sensor.
-- Documented that lap counting and automatic final stop are still missing from the current movement baseline.
+- Removed then-active documentation references to gyroscope, start button, status LED, encoder, and left ultrasonic sensor.
+- Documented that lap counting and automatic final stop were still missing from that movement baseline.
+
+## 2026-07-13
+
+- Updated the active Open Challenge baseline to the final three-ultrasonic Arduino Mega version provided by the team.
+- Updated the active pin map to servo D9, L298N D5/D6/D7, front ultrasonic D42/D43, right ultrasonic D46/D47, and left ultrasonic D52/D53.
+- Documented side-opening turn detection, 12-corner counting, final advance, and automatic final stop behavior.
+- Marked HuskyLens as installed and manually tested without Arduino code integration yet.
+- Selected the parking concept: use HuskyLens to detect the parking area, drive until both parking walls leave the camera view, then reverse and align into the parking box.
+- Updated documentation, calibration notes, risk tracking, and wiring references to match the current robot.
 

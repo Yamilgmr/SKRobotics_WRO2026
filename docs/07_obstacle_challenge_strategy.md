@@ -2,9 +2,9 @@
 
 ## Current Status
 
-The team selected a HuskyLens camera as the planned perception sensor for the Obstacle Challenge. The HuskyLens is not integrated into the active Arduino Mega code yet, so the repository treats obstacle behavior as a planned extension rather than a completed feature.
+The team selected and installed a HuskyLens camera as the planned perception sensor for the Obstacle Challenge. The HuskyLens has been tested manually, but it is not integrated into the active Arduino Mega code yet, so the repository treats obstacle behavior as a planned extension rather than a completed feature.
 
-Parking is not selected yet. The team will decide later whether parking uses HuskyLens color detection, distance geometry, timed movement, or a combined method.
+Parking strategy is selected conceptually. The robot should use HuskyLens to detect the parking area, drive forward until the two parking walls leave the camera point of view, then reverse and align into the parking box. The motion sequence is not implemented in Arduino code yet.
 
 ## Rule-Based Requirement
 
@@ -16,7 +16,7 @@ The robot must pass red and green traffic signs on the correct side. It must als
 | --- | --- | --- |
 | Front ultrasonic | Detect a nearby wall or object | Cannot identify object color |
 | Right ultrasonic | Estimate wall distance and right openings | Cannot classify red or green signs |
-| HuskyLens camera | Planned red/green traffic sign recognition | Needs mounting, training, communication code, and lighting tests |
+| HuskyLens camera | Installed camera for planned red/green recognition and parking-area detection | Needs Arduino communication code and measured detection data |
 | Arduino Mega | Run state machine and control actuators | Must receive simplified color/object data from HuskyLens |
 
 ## Selected Perception Direction
@@ -27,7 +27,7 @@ Main risks:
 
 - Lighting can change red/green recognition accuracy.
 - Camera angle and mounting height affect detection.
-- The communication interface, likely I2C or UART, still has to be confirmed and tested.
+- The communication interface to Arduino Mega still has to be confirmed and tested in code.
 - False positives can trigger the wrong evasion maneuver.
 
 ## Planned State Machine Extension
@@ -43,19 +43,22 @@ stateDiagram-v2
     EVADE_GREEN --> RECOVER_LANE
     RECOVER_LANE --> FOLLOW_LANE
     FOLLOW_LANE --> PARKING_SEARCH: three laps completed
-    PARKING_SEARCH --> PARKING_MANEUVER: parking target found
+    PARKING_SEARCH --> PARKING_APPROACH: parking walls visible
+    PARKING_APPROACH --> PARKING_MANEUVER: parking walls leave camera view
     PARKING_MANEUVER --> [*]
 ```
 
 ## Placeholder Interfaces
 
-The Obstacle Challenge firmware will need these interfaces after the HuskyLens is mounted and communication is tested:
+The Obstacle Challenge firmware will need these interfaces after HuskyLens communication is tested:
 
 - `readHuskyLensColor()`
 - `handleRedObstacle()`
 - `handleGreenObstacle()`
 - `recoverAfterObstacle()`
 - `searchParkingBox()`
+- `parkingWallsVisible()`
+- `approachUntilParkingWallsLeaveView()`
 - `performParkingManeuver()`
 
 ## Evidence To Collect
@@ -67,4 +70,5 @@ The Obstacle Challenge firmware will need these interfaces after the HuskyLens i
 - False positive and false negative examples.
 - Recovery behavior after each obstacle.
 - Communication test between HuskyLens and Arduino Mega.
-- Parking strategy decision and parking marker detection tests.
+- Parking wall detection tests.
+- Reverse-and-align parking maneuver tests.

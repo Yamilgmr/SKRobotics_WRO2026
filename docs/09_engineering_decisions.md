@@ -8,7 +8,7 @@ Reason:
 
 - The team had urgent practical constraints and needed a controller that could be wired and tested immediately.
 - Arduino Mega 2560 provides many 5 V digital pins for sensors, servo signal, and L298N control.
-- It is compatible with the current two-ultrasonic, MG996R, and L298N baseline.
+- It is compatible with the current three-ultrasonic, MG996R, L298N, and HuskyLens-ready baseline.
 
 Trade-off:
 
@@ -16,19 +16,19 @@ Trade-off:
 - Arduino Mega has less processing capability for advanced vision, so HuskyLens will handle the camera-side recognition.
 - HuskyLens communication and calibration still need to be integrated.
 
-## Decision: Use Two Ultrasonic Sensors For The First Mega Baseline
+## Decision: Use Three Ultrasonic Sensors For The Current Open Challenge Baseline
 
 Reason:
 
-- The front sensor can detect upcoming walls.
-- The right sensor can support right-wall following.
-- This is enough to start Open Challenge tuning with the available hardware.
+- The front sensor can support safety, fallback corner capture, and turn-exit validation.
+- The right and left sensors can detect wall-to-opening transitions before the front wall becomes dangerous.
+- The three-sensor layout makes left and right turn decisions more explainable than the earlier reduced two-sensor baseline.
 
 Trade-off:
 
-- No left-side distance measurement.
-- Recovery after corners is harder.
-- The robot depends more on ultrasonic thresholds and careful timing.
+- No gyroscope or encoder is used, so the robot still depends on ultrasonic thresholds and timing.
+- Three HC-SR04 sensors require careful scheduling to avoid blocking control or cross-talk.
+- The final pin map must be checked physically against the robot before judging it as verified wiring.
 
 ## Decision: Use L298N For The First Motor-Control Prototype
 
@@ -48,12 +48,13 @@ Trade-off:
 
 Reason:
 
-- The team selected HuskyLens as the planned red/green traffic sign camera.
+- The team selected and installed HuskyLens as the planned red/green traffic sign camera.
 - HuskyLens can provide simplified recognition data to the Arduino Mega.
+- The selected parking concept also uses HuskyLens to detect the parking area before reversing into the box.
 - WRO documentation rewards engineering reasoning, testing, and reproducibility.
 - A clear risk list is more useful than pretending the camera is already integrated.
 
 Trade-off:
 
 - The Obstacle Challenge strategy is now selected, but not proven.
-- The team must mount the HuskyLens, test communication, and collect real red/green detection data before the Obstacle Challenge can be competitive.
+- The team must test Arduino communication and collect real red/green and parking-wall detection data before the Obstacle Challenge can be competitive.

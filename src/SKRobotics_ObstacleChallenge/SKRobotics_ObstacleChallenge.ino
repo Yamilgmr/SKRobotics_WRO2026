@@ -4,8 +4,11 @@
   Target controller: Arduino Mega 2560
 
   Current status:
-  - HuskyLens is selected as the planned camera for red/green sign detection.
-  - HuskyLens communication, mounting, and calibration are not implemented yet.
+  - HuskyLens is installed and manually tested without Arduino code yet.
+  - HuskyLens is selected for red/green sign detection and parking-area detection.
+  - HuskyLens communication and calibration are not implemented yet.
+  - Selected parking concept: detect the parking area, drive forward until both
+    parking walls leave the camera view, then reverse and align into the box.
   - This sketch documents the future state structure without pretending the
     obstacle and parking behavior has already been tested.
 */
@@ -25,6 +28,7 @@ enum RobotState {
   EVADE_GREEN,
   RECOVER_LANE,
   SEARCH_PARKING,
+  APPROACH_PARKING_UNTIL_WALLS_LEAVE_VIEW,
   PARKING_MANEUVER,
   FINISHED
 };
@@ -38,6 +42,8 @@ void handleRedObstacle();
 void handleGreenObstacle();
 void recoverLane();
 void searchParkingBox();
+bool parkingWallsVisible();
+void approachUntilParkingWallsLeaveView();
 void performParkingManeuver();
 void stopRobot();
 
@@ -71,6 +77,9 @@ void loop() {
       break;
     case SEARCH_PARKING:
       searchParkingBox();
+      break;
+    case APPROACH_PARKING_UNTIL_WALLS_LEAVE_VIEW:
+      approachUntilParkingWallsLeaveView();
       break;
     case PARKING_MANEUVER:
       performParkingManeuver();
@@ -118,12 +127,25 @@ void recoverLane() {
 }
 
 void searchParkingBox() {
-  // TODO: Decide whether parking detection uses HuskyLens, distance geometry, timing, or a combined method.
+  // TODO: Use HuskyLens to detect the parking area after communication is tested.
+  if (parkingWallsVisible()) {
+    state = APPROACH_PARKING_UNTIL_WALLS_LEAVE_VIEW;
+  }
+}
+
+bool parkingWallsVisible() {
+  // TODO: Return true when HuskyLens sees the two parking walls/markers.
+  return false;
+}
+
+void approachUntilParkingWallsLeaveView() {
+  // TODO: Drive forward until both parking walls leave the HuskyLens point of view.
+  // This should place the robot so the next step can reverse and align into the box.
   state = PARKING_MANEUVER;
 }
 
 void performParkingManeuver() {
-  // TODO: Add parking motion after the detection method is selected.
+  // TODO: Reverse and align into the parking box after the visual trigger is validated.
   state = FINISHED;
 }
 

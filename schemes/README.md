@@ -8,7 +8,7 @@ Current files:
 - [Electromechanical overview](electromechanical_overview.md)
 - [Power architecture](power_architecture.md)
 
-The current wiring diagram image shows the Arduino Mega 2560, front and right HC-SR04 ultrasonic sensors, MG996R servo, L298N motor driver, DC motor, breadboard, 2 x 3.7 V battery pack, switch, recommended servo regulator, and common ground.
+The current wiring diagram image shows the Arduino Mega 2560, front, right, and left HC-SR04 ultrasonic sensors, MG996R servo, L298N motor driver, DC motor, breadboard, 2 x 3.7 V battery pack, switch, recommended servo regulator, and common ground. HuskyLens is installed for future Obstacle Challenge code and should be added to the final wiring diagram after its communication method is confirmed.
 
 Pending:
 

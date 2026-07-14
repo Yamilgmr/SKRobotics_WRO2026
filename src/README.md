@@ -9,15 +9,15 @@ This folder contains Arduino Mega sketches for the SKRobotics WRO 2026 vehicle.
 - Processor: `ATmega2560`.
 - `Servo`, included with the Arduino IDE.
 
-The Open Challenge firmware uses `Servo` for the MG996R, `analogWrite()` for the L298N ENA pin, and `pulseIn()` for ultrasonic timing.
+The Open Challenge firmware uses `Servo` for the MG996R, `analogWrite()` for the L298N ENA pin, and non-blocking timed ultrasonic reads for the three HC-SR04 sensors.
 
 ## Sketches
 
 | Path | Purpose |
 | --- | --- |
-| `SKRobotics_OpenChallenge/SKRobotics_OpenChallenge.ino` | Arduino Mega Open Challenge base firmware using front/right ultrasonic sensing, right-wall following, and timed/sensor turn exits |
-| `SKRobotics_ObstacleChallenge/SKRobotics_ObstacleChallenge.ino` | Placeholder architecture for future HuskyLens red/green obstacle strategy |
-| `calibration/ultrasonic_sensor_test/ultrasonic_sensor_test.ino` | Tests front and right ultrasonic readings |
+| `SKRobotics_OpenChallenge/SKRobotics_OpenChallenge.ino` | Current Arduino Mega Open Challenge firmware using front/right/left ultrasonic sensing, side-opening turn detection, 12-corner counting, and final stop behavior |
+| `SKRobotics_ObstacleChallenge/SKRobotics_ObstacleChallenge.ino` | Placeholder architecture for future HuskyLens red/green obstacle and parking strategy |
+| `calibration/ultrasonic_sensor_test/ultrasonic_sensor_test.ino` | Tests front, right, and left ultrasonic readings |
 | `calibration/servo_sweep_test/servo_sweep_test.ino` | Finds safe MG996R steering center and limits |
 | `calibration/motor_driver_test/motor_driver_test.ino` | Arduino Mega L298N motor driver test, disabled by default |
 

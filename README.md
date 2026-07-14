@@ -22,7 +22,7 @@ The WRO 2026 rules evaluate not only final vehicle performance, but also the qua
 4. System thinking and engineering decisions.
 5. Reproducibility and GitHub repository quality.
 
-Our current vehicle is in an active prototype stage. After an urgent controller change, the active baseline is now Arduino Mega 2560 with a reduced sensor set. This README reflects the current robot, not the older ESP32 wiring attempt.
+Our current vehicle is in an active prototype stage. After an urgent controller change, the active baseline is now Arduino Mega 2560 with three ultrasonic sensors and a HuskyLens installed for future Obstacle Challenge perception. This README reflects the current robot, not the older ESP32 wiring attempt.
 
 ## Current Hardware Baseline
 
@@ -31,10 +31,11 @@ The current prototype uses the following parts:
 | Subsystem | Current Part | Purpose | Status |
 | --- | --- | --- | --- |
 | Main controller | Arduino Mega 2560 | Reads sensors, controls actuators, and runs the state machine | Selected |
-| Distance sensing | 2 HC-SR04 ultrasonic sensors | Front distance and right-wall distance | Selected |
+| Distance sensing | 3 HC-SR04 ultrasonic sensors | Front, right, and left distance sensing | Selected |
 | Steering | MG996R servo | Front axle steering | Selected |
 | Propulsion | DC motor | Drive motor | Selected |
 | Motor driver | L298N | DC motor direction and PWM speed control | Selected |
+| Vision | HuskyLens | Planned Obstacle Challenge sign and parking-area detection | Installed, manual tests completed |
 | Power | 2 x 3.7 V cells | 7.4 V nominal battery pack | Selected |
 | Prototyping | Breadboard | Temporary signal and power distribution | Selected |
 
@@ -50,34 +51,34 @@ This pin map comes from the final Arduino Mega code currently used by the team. 
 | L298N ENA | D5 | Motor speed PWM |
 | L298N IN1 | D6 | Motor direction |
 | L298N IN2 | D7 | Motor direction |
-| Front HC-SR04 TRIG | D22 | Front ultrasonic trigger |
-| Front HC-SR04 ECHO | D23 | Front ultrasonic echo |
-| Right HC-SR04 TRIG | D24 | Right ultrasonic trigger |
-| Right HC-SR04 ECHO | D25 | Right ultrasonic echo |
+| Front HC-SR04 TRIG | D42 | Front ultrasonic trigger |
+| Front HC-SR04 ECHO | D43 | Front ultrasonic echo |
+| Right HC-SR04 TRIG | D46 | Right ultrasonic trigger |
+| Right HC-SR04 ECHO | D47 | Right ultrasonic echo |
+| Left HC-SR04 TRIG | D52 | Left ultrasonic trigger |
+| Left HC-SR04 ECHO | D53 | Left ultrasonic echo |
 
 ## Technical Direction
 
-For the Open Challenge, the current strategy is right-wall following with predictive corner steering. The robot uses the right ultrasonic sensor to estimate lateral distance from the wall and the front ultrasonic sensor to detect upcoming walls. Instead of stopping before every corner, the robot should begin steering before the front wall becomes dangerous.
+For the Open Challenge, the current strategy is side-opening detection with predictive corner steering. The robot reads the left and right ultrasonic sensors more often than the front sensor so that a wall-to-opening transition can trigger the turn early. The front sensor is used for safety, exit validation, and corner counting support.
 
 The planned behavior is:
 
 1. Start driving after power-on and sensor warmup.
-2. Drive forward while reading the front and right ultrasonic sensors.
-3. Use the right ultrasonic sensor to correct steering during straight sections.
-4. Turn right when the right side is free.
-5. Turn left when the front is blocked and the right side is not free.
-6. Hold each turn until the timed/sensor exit condition is reached.
-7. Drive straight briefly after each turn before allowing another turn decision.
+2. Drive forward while reading front, right, and left ultrasonic sensors.
+3. Detect the driving direction from the first reliable side opening.
+4. Start turns from side wall-to-opening transitions when possible.
+5. Use the front ultrasonic sensor for safety and turn-exit validation.
+6. Apply turn, fine-align, and countersteer phases.
+7. Count 12 corners, advance through the final straight, and stop.
 
-This is a practical first approach for the hardware currently available. It is weaker than a full sensor suite because the robot no longer has a left ultrasonic sensor and the HuskyLens camera is not integrated into the active code yet. The repository documents that limitation honestly so the next engineering decisions are clear.
+This is a practical approach for the hardware currently available. The Open Challenge code now uses three ultrasonic sensors and includes 12-corner counting plus final stop behavior. The HuskyLens is installed and ready for Obstacle Challenge development, but it is not integrated into the active code yet.
 
 ## Current Limitations
 
-- Only two ultrasonic sensors are installed: front and right.
-- HuskyLens is selected for Obstacle Challenge red/green recognition, but it is not integrated or calibrated yet.
-- Parking strategy is not selected yet.
+- HuskyLens is installed for Obstacle Challenge red/green recognition, but it is not integrated into Arduino code yet.
+- Parking strategy is selected at concept level but not implemented in code yet.
 - No gyroscope, encoder, start button, or status LED is used in the current code.
-- Lap counting and automatic final stop after three laps are not implemented yet.
 - The wiring diagram image is available, but physical wire-by-wire verification is still pending.
 - Battery behavior at 7.4 V nominal must be measured under motor load.
 
@@ -125,12 +126,16 @@ This repository follows the public WRO Future Engineers template structure and e
 
 The starter firmware is designed around a finite state machine. That makes the robot behavior easier to explain, test, and improve. The Open Challenge sketch separates these responsibilities:
 
-- `STRAIGHT`: follow the right wall and decide whether a left or right turn is needed.
-- `TURNING_LEFT`: hold a left turn until the turn exit condition.
-- `TURNING_RIGHT`: hold a right turn until the turn exit condition.
-- `POST_TURN_STRAIGHT`: drive straight briefly after a turn before allowing new decisions.
+- `STATE_FIND_DIRECTION`: center and detect the first reliable side opening.
+- `STATE_CRUISE`: follow the track and watch side openings.
+- `STATE_CONFIRM_SIDES`: confirm new side readings before committing to a turn.
+- `STATE_TURNING`: execute the main turn phase.
+- `STATE_FINE_ALIGN`: apply the second steering correction.
+- `STATE_EXIT_TURN`: countersteer and recover into the next straight.
+- `STATE_FINAL_ADVANCE`: advance after the twelfth corner.
+- `STATE_STOPPED`: stop after three laps.
 
-The first version avoids depending on unfinished calibration data. It uses the Arduino Mega, two ultrasonic sensors, the MG996R steering servo, and the L298N motor driver. Constants are grouped at the top of the sketch so testing can be done methodically.
+The current Open Challenge version uses the Arduino Mega, three ultrasonic sensors, the MG996R steering servo, and the L298N motor driver. Constants are grouped at the top of the sketch so testing can be done methodically.
 
 ## Motor Driver Status
 
@@ -150,17 +155,17 @@ The L298N setup must be documented with:
 The Open Challenge rewards completing three laps and stopping correctly. Our first score-focused plan is:
 
 1. Verify the Arduino Mega pin map.
-2. Build a repeatable right-wall-following baseline.
-3. Tune the front distance threshold for early corner entry.
-4. Tune turn timing and sensor thresholds so the robot exits corners consistently.
-5. Reduce oscillation by limiting steering correction.
-6. Add turn counting and final stop after the movement baseline is reliable.
+2. Build a repeatable side-opening detection baseline.
+3. Tune side-opening and front fallback thresholds for early corner entry.
+4. Tune turn timing, fine alignment, and countersteer so the robot exits corners consistently.
+5. Reduce oscillation by limiting lateral correction.
+6. Use 12-corner counting and final advance/stop behavior from the current firmware.
 
 The team goal is to make the robot complete laps reliably before increasing speed. Once reliability is stable, the prefire turn can be made more aggressive to reduce lap time.
 
 ## Obstacle Challenge Scoring Focus
 
-HuskyLens is selected as the camera for Obstacle Challenge red/green recognition, but it is not integrated into the current Arduino Mega code yet. The robot needs reliable HuskyLens communication, mounting, and calibration before it can make correct evasion decisions. Parking is also still an open design problem.
+HuskyLens is installed as the camera for Obstacle Challenge red/green recognition. The team has performed manual HuskyLens tests without Arduino code integration yet. The robot still needs reliable HuskyLens communication, mounting validation, and calibration before it can make correct evasion decisions.
 
 Recommended next steps:
 
@@ -168,7 +173,7 @@ Recommended next steps:
 2. Mount the HuskyLens where it can see traffic signs before the car reaches them.
 3. Add a test sketch for HuskyLens red/green recognition.
 4. Add obstacle states to the finite state machine.
-5. Choose and document a parking detection method for the magenta parking box.
+5. Implement the selected parking strategy: use HuskyLens to detect the parking area, drive forward until both parking walls leave the camera view, then reverse and align into the parking box.
 
 This prevents the team from pretending an untested capability exists. Judges usually reward honest engineering reasoning more than undocumented claims.
 
@@ -194,8 +199,8 @@ Priority tests:
 - Motor PWM response with the L298N.
 - Corner prefire threshold test.
 - Three lap consistency test.
-- Turn counting and final stop test after that feature is added.
-- Future HuskyLens red/green detection test after camera integration.
+- Turn counting and final stop test with the current firmware.
+- Future HuskyLens red/green detection test after Arduino communication is added.
 
 ## Reproducibility Checklist
 
@@ -217,10 +222,10 @@ Priority tests:
 - [ ] Driving video links.
 - [ ] CAD or mechanical drawings.
 - [ ] L298N wiring and PWM test data.
-- [ ] Turn counting and automatic final stop.
+- [x] Turn counting and automatic final stop.
 - [x] Obstacle color detection hardware selected: HuskyLens.
-- [ ] HuskyLens integration and red/green test data.
-- [ ] Parking strategy.
+- [ ] HuskyLens Arduino integration and red/green test data.
+- [x] Parking strategy selected.
 - [x] Current Open Challenge code marked as final for now.
 - [ ] Obstacle and parking competition code.
 

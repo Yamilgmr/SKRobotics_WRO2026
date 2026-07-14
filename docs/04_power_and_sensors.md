@@ -16,8 +16,10 @@ flowchart LR
     F --> G["Arduino Mega 2560"]
     G --> H["Front HC-SR04"]
     G --> I["Right HC-SR04"]
-    G --> J["MG996R servo signal"]
-    F --> K["MG996R servo power if current rating allows"]
+    G --> J["Left HC-SR04"]
+    G --> K["MG996R servo signal"]
+    G -. planned code .-> L["HuskyLens"]
+    F --> M["MG996R servo power if current rating allows"]
 ```
 
 The L298N is selected because it is available and easy to integrate with Arduino Mega PWM and direction outputs. This choice must be tested carefully because the L298N can waste voltage as heat. The MG996R servo may draw more current than the Arduino 5 V regulator can safely provide, so a separate regulated servo supply may be required. All grounds must be common.
@@ -29,9 +31,11 @@ Because the Arduino Mega uses 5 V logic, the HC-SR04 echo signals are compatible
 | Sensor | Position | Use |
 | --- | --- | --- |
 | Front ultrasonic | Front, facing forward | Detect upcoming walls and turn timing |
-| Right ultrasonic | Right side, facing right | Detect right-side openings and support right-wall following |
+| Right ultrasonic | Right side, facing right | Detect right-side openings and support lateral correction |
+| Left ultrasonic | Left side, facing left | Detect left-side openings and support lateral correction |
+| HuskyLens | Front vision mount | Planned red/green sign and parking-area detection |
 
-No left ultrasonic sensor, gyroscope, encoder, start button, or status LED is used in the current code.
+No gyroscope, encoder, start button, status LED, or color sensor code is used in the current Open Challenge code. HuskyLens is installed and manually tested, but Arduino communication code and measured recognition data are still pending.
 
 ## Current Pin Map
 
@@ -45,17 +49,18 @@ The current wiring diagram image is stored at `schemes/electrical_wiring_diagram
 | L298N ENA | D5 | Motor speed PWM |
 | L298N IN1 | D6 | Motor direction |
 | L298N IN2 | D7 | Motor direction |
-| Front HC-SR04 TRIG | D22 | Ultrasonic trigger |
-| Front HC-SR04 ECHO | D23 | Ultrasonic echo |
-| Right HC-SR04 TRIG | D24 | Ultrasonic trigger |
-| Right HC-SR04 ECHO | D25 | Ultrasonic echo |
+| Front HC-SR04 TRIG | D42 | Ultrasonic trigger |
+| Front HC-SR04 ECHO | D43 | Ultrasonic echo |
+| Right HC-SR04 TRIG | D46 | Ultrasonic trigger |
+| Right HC-SR04 ECHO | D47 | Ultrasonic echo |
+| Left HC-SR04 TRIG | D52 | Ultrasonic trigger |
+| Left HC-SR04 ECHO | D53 | Ultrasonic echo |
 
 ## Sensor Placement Reasoning
 
-The front ultrasonic sensor supports early wall detection. The right ultrasonic sensor supports right-wall following and detects open space on the right side. This is a minimal sensor set, so the software must avoid overreacting to a single noisy reading.
+The front ultrasonic sensor supports safety, fallback corner capture, and turn-exit validation. The right and left ultrasonic sensors detect wall-to-opening transitions so the robot can start turns before the front wall becomes dangerous. The side sensors are also used for lateral correction and post-turn recovery.
 
 - Ultrasonic readings can fail on angled or soft surfaces.
-- With only one side sensor, the robot has less information about lane position.
 - Without a gyroscope or encoder, turns depend on time and ultrasonic exit conditions.
 - At high speed, sensor latency and steering inertia become important.
 
@@ -66,8 +71,8 @@ The front ultrasonic sensor supports early wall detection. The right ultrasonic 
 3. Compare average error and outlier frequency.
 4. Tune valid distance limits and filtering.
 5. Repeat after final sensor mounting, because angle and height affect readings.
-6. Test `FRONT_TURN_CM`, `RIGHT_FREE_CM`, `RIGHT_TARGET_CM`, and turn timing on the real track.
+6. Test `SIDE_OPEN_CM`, `FRONT_TURN_CM`, `WALL_TARGET_CM`, and turn timing on the real track.
 
 ## Obstacle Sensor
 
-HuskyLens is selected as the planned camera for red/green traffic sign detection. It still needs mounting, power verification, Arduino Mega communication testing, and detection calibration before it can be treated as working Obstacle Challenge hardware.
+HuskyLens is installed as the planned camera for red/green traffic sign detection and parking-area detection. The team has performed manual HuskyLens checks without Arduino code integration yet. It still needs power verification, Arduino Mega communication testing, mounting validation, and detection calibration before it can be treated as working Obstacle Challenge hardware.

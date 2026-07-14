@@ -6,7 +6,8 @@ The robot uses a car-like layout:
 
 - Rear propulsion with one DC motor.
 - Front steering controlled by an MG996R servo.
-- Ultrasonic sensors mounted forward and on the right side.
+- Ultrasonic sensors mounted forward, on the right side, and on the left side.
+- HuskyLens mounted for planned Obstacle Challenge sign and parking-area detection.
 
 This layout matches the Future Engineers challenge because the robot must move smoothly around a road-like track and perform controlled turns rather than rotate in place.
 
@@ -23,8 +24,8 @@ The starter code uses these default values:
 
 ```cpp
 static const int SERVO_CENTER = 90;
-static const int SERVO_LEFT = 25;
-static const int SERVO_RIGHT = 130;
+static const int SERVO_LEFT = 35;
+static const int SERVO_RIGHT = 110;
 ```
 
 These values match the current base firmware convention. They still need physical validation with the wheels lifted, because the safest software limits depend on the final servo horn and steering linkage geometry.
@@ -43,20 +44,20 @@ Evidence to collect:
 
 ## Prefire Cornering
 
-The team wants the robot to turn without stopping. The current prefire method starts a steering turn when the front sensor sees an upcoming wall while the right sensor supports wall following before and after the turn. The expected benefit is lower lap time. The risk is lower repeatability because the robot no longer has a left ultrasonic sensor.
+The team wants the robot to turn without stopping. The current prefire method starts a steering turn when a side sensor changes from wall to opening, while the front sensor remains available as a fallback and safety reference. The expected benefit is lower lap time. The main risk is that the car still has no gyroscope or encoder, so turn quality depends on ultrasonic readings, timing, and the mechanical steering limits.
 
 Variables to tune:
 
+- `SIDE_OPEN_CM`
 - `FRONT_TURN_CM`
-- `FRONT_CLEAR_AFTER_TURN_CM`
-- `RIGHT_TARGET_CM`
-- `RIGHT_FREE_CM`
-- `RIGHT_TOO_CLOSE_CM`
-- `MIN_TURN_MS`
-- `MAX_TURN_MS`
-- `POST_TURN_STRAIGHT_MS`
-- `SERVO_LEFT`
-- `SERVO_RIGHT`
+- `TURN_EXIT_FRONT_CM`
+- `WALL_TARGET_CM`
+- `TURN_MIN_MS`
+- `TURN_MAX_MS`
+- `ALIGN_MIN_MS`
+- `ALIGN_MAX_MS`
+- `SERVO_LEFT_DEG`
+- `SERVO_RIGHT_DEG`
 
 ## Mechanical Evidence To Add
 

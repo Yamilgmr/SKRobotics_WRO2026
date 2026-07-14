@@ -2,7 +2,7 @@
 
 ## Goal
 
-Complete three laps without touching walls and later stop after the final lap. The current code is a movement baseline: it focuses on right-wall following and reliable left/right turn decisions, but it does not yet implement lap counting or the final stop.
+Complete three laps without touching walls and stop after the final lap. The current code is the team's final Open Challenge version for now. It counts 12 corners, advances through the final straight, and stops.
 
 ## Why Continuous Turns
 
@@ -10,14 +10,16 @@ A stop-and-turn approach is simpler, but it costs time and can make the robot un
 
 ## Current Algorithm
 
-1. Read front and right ultrasonic sensors.
-2. Filter readings to reduce large sudden jumps.
-3. While in `STRAIGHT`, evaluate only the front and right distances.
-4. If the front is blocked and the right side is free, turn right.
-5. If the front is blocked and the right side is not free, turn left.
-6. If the right side is free for multiple readings and was previously blocked, turn right.
-7. During a turn, do not re-decide the maneuver.
-8. After the turn exit condition, drive straight for a short post-turn period.
+1. Read right, left, and front ultrasonic sensors using a non-blocking scheduler.
+2. Prioritize side sensors so wall-to-opening transitions are detected early.
+3. Detect the track direction from the first reliable side opening.
+4. Drive forward while checking side openings, front distance, and safety thresholds.
+5. Start a turn when a side sensor changes from wall to opening.
+6. Use the front sensor as a fallback if the side opening was not detected in time.
+7. Execute the turn sequence: entry steering, main turn, fine alignment, countersteer, and recovery.
+8. Count completed corners.
+9. After corner 12, advance on the starting straight for `FINAL_ADVANCE_MS`.
+10. Stop the robot.
 
 ## Tuning Method
 
@@ -25,29 +27,27 @@ Start with slow tests. Change one variable at a time:
 
 | Test | Variable | Expected Observation |
 | --- | --- | --- |
-| Right-wall distance | `RIGHT_TARGET_CM` | Higher value drives farther from the right wall |
-| Right opening detection | `RIGHT_FREE_CM` | Higher value requires more open space before turning right |
-| Front corner entry | `FRONT_TURN_CM` | Higher value turns earlier |
-| Turn exit distance | `FRONT_CLEAR_AFTER_TURN_CM` | Higher value waits for clearer front space |
-| Turn duration | `MIN_TURN_MS`, `MAX_TURN_MS` | Longer value turns more |
-| Post-turn stability | `POST_TURN_STRAIGHT_MS` | Longer value prevents chained turns |
-| Speed | `SPEED_NORMAL`, `SPEED_TURN` | Higher speed needs earlier steering |
+| Wall target | `WALL_TARGET_CM` | Higher value drives farther from the wall |
+| Side opening detection | `SIDE_OPEN_CM` | Higher value requires more open space before a side-triggered turn |
+| Front fallback | `FRONT_TURN_CM` | Higher value captures turns earlier from the front sensor |
+| Turn exit | `TURN_EXIT_FRONT_CM`, `TURN_EXIT_WALL_MAX_CM`, `TURN_EXIT_SIDE_MAX_CM` | Controls when the robot accepts that the new straight is visible |
+| Turn duration | `TURN_MIN_MS`, `TURN_MAX_MS` | Longer value turns more |
+| Alignment | `ALIGN_MIN_MS`, `ALIGN_MAX_MS` | Controls second correction timing |
+| Final stop | `FINAL_ADVANCE_MS` | Controls how far the robot drives after corner 12 |
+| Speed | `CRUISE_PWM`, `TURN_PWM`, `ALIGN_PWM`, `FINAL_PWM` | Higher speed needs earlier steering and stronger recovery |
 
 ## Success Metrics
 
 - Completes one lap without touching walls.
 - Completes three laps without manual rescue.
-- Does not chain repeated right turns when the right side remains open.
-- Right-wall corrections do not oscillate.
+- Counts 12 corners consistently.
+- Stops after the final advance.
+- Does not chain false turns from noisy ultrasonic readings.
 - Turn exit timing is repeatable at expected battery voltage.
 
-## Missing For Full Open Challenge Scoring
+## Remaining Open Challenge Evidence
 
-- Lap counting.
-- Automatic stop after three laps.
-- Test evidence for the chosen turn timing.
-- Final tuning at the real competition battery voltage.
-
-## Next Improvements
-
-The current two-ultrasonic setup is enough for a first Open Challenge movement baseline, but it has limited recovery information. Adding lap counting and a final stop is the most important next software step. Later, adding an encoder or gyroscope would make turns and stopping more repeatable, but those devices are not part of the current code.
+- More measured calibration data for ultrasonic readings.
+- L298N PWM and heat observations.
+- Video of a full run.
+- Physical wire-by-wire verification against the final pin map.
